@@ -1,0 +1,16 @@
+import { Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { DEMO_EMAIL, DEMO_PASSWORD } from '../../constants/config';
+
+export function LoginScreen({ onSubmit, onRegister, busy, error }: { onSubmit: (email: string, password: string) => void; onRegister: () => void; busy?: boolean; error?: string }) {
+  return <AuthForm title="Đăng nhập tài khoản" submitLabel={busy ? 'Đang đăng nhập...' : 'Đăng nhập'} initialEmail={DEMO_EMAIL} initialPassword={DEMO_PASSWORD} onSubmit={onSubmit} footer="Chưa có tài khoản? Đăng ký ngay" onFooter={onRegister} error={error} />;
+}
+
+export function AuthForm({ title, submitLabel, initialEmail = '', initialPassword = '', showName, onSubmit, onFooter, footer, error }: { title: string; submitLabel: string; initialEmail?: string; initialPassword?: string; showName?: boolean; onSubmit: (email: string, password: string, name?: string) => void; onFooter: () => void; footer: string; error?: string }) {
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState(initialEmail);
+  const [password, setPassword] = React.useState(initialPassword);
+  return <SafeAreaView style={styles.page}><View style={styles.brand}><View style={styles.logo}><Text style={styles.logoText}>IS</Text></View><Text style={styles.title}>Inventory Support</Text><Text style={styles.subtitle}>Quản lý cửa hàng đơn giản hơn mỗi ngày</Text></View><View style={styles.card}><Text style={styles.heading}>{title}</Text>{showName ? <><Text style={styles.label}>Họ và tên</Text><TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Nguyễn Văn A" /></> : null}<Text style={styles.label}>Email</Text><TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" /><Text style={styles.label}>Mật khẩu</Text><TextInput style={styles.input} value={password} onChangeText={setPassword} secureTextEntry /><Pressable style={styles.button} onPress={() => onSubmit(email.trim(), password, name.trim())}><Text style={styles.buttonText}>{submitLabel}</Text></Pressable>{error ? <Text style={styles.error}>{error}</Text> : null}<Pressable onPress={onFooter}><Text style={styles.link}>{footer}</Text></Pressable></View></SafeAreaView>;
+}
+
+import React from 'react';
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: '#17233b', padding: 22, justifyContent: 'center' }, brand: { alignItems: 'center', marginBottom: 30 }, logo: { width: 66, height: 66, borderRadius: 20, backgroundColor: '#b9d1ff', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }, logoText: { color: '#17233b', fontSize: 24, fontWeight: '900' }, title: { color: '#fff', fontSize: 28, fontWeight: '900' }, subtitle: { color: '#b8c5da', marginTop: 8 }, card: { backgroundColor: '#fff', borderRadius: 20, padding: 20, gap: 12 }, heading: { color: '#17233b', fontSize: 20, fontWeight: '800' }, label: { color: '#17233b', fontWeight: '700' }, input: { backgroundColor: '#fff', borderColor: '#e3e8f0', borderWidth: 1, borderRadius: 10, padding: 12 }, button: { backgroundColor: '#2f6fed', borderRadius: 11, padding: 14, alignItems: 'center' }, buttonText: { color: '#fff', fontWeight: '800' }, error: { color: '#c2413b', textAlign: 'center' }, link: { color: '#2f6fed', textAlign: 'center', fontWeight: '700' } });

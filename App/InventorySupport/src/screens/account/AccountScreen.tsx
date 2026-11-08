@@ -1,0 +1,8 @@
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '../../store/auth.store';
+
+export function AccountScreen() {
+  const { user, signOut } = useAuth();
+  return <SafeAreaView style={styles.page}><View style={styles.profile}><View style={styles.avatar}><Text style={styles.avatarText}>{user?.name.charAt(0).toUpperCase()}</Text></View><Text style={styles.name}>{user?.name}</Text><Text style={styles.meta}>{user?.email}</Text><Text style={styles.role}>{user?.role}</Text></View><View style={styles.card}><Text>Họ và tên: {user?.name}</Text><Text>Email: {user?.email}</Text><Text>Vai trò: {user?.role}</Text><Text>Cửa hàng: {user?.storeId}</Text></View><Pressable style={styles.button} onPress={signOut}><Text style={styles.buttonText}>Đăng xuất</Text></Pressable></SafeAreaView>;
+}
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: '#f5f7fb', padding: 18, gap: 14 }, profile: { backgroundColor: '#17233b', borderRadius: 18, padding: 22, alignItems: 'center' }, avatar: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#b9d1ff', alignItems: 'center', justifyContent: 'center' }, avatarText: { fontSize: 28, fontWeight: '900' }, name: { color: '#fff', fontSize: 21, fontWeight: '800', marginTop: 10 }, meta: { color: '#b8c5da', marginTop: 5 }, role: { color: '#2f6fed', backgroundColor: '#e1ebff', padding: 6, borderRadius: 10, marginTop: 10, fontWeight: '800' }, card: { backgroundColor: '#fff', borderRadius: 14, padding: 18, gap: 14 }, button: { backgroundColor: '#c2413b', borderRadius: 10, padding: 14, alignItems: 'center' }, buttonText: { color: '#fff', fontWeight: '800' } });
