@@ -1,13 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
-import { RolesGuard } from './guards/roles.guard.js';
+import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+import { PermissionsGuard } from './guards/permissions.guard.js';
 
+@Global()
 @Module({
-  imports: [
-  ],
   controllers: [AuthController],
-  providers: [AuthService, RolesGuard],
-  exports: [RolesGuard],
+  providers: [AuthService, JwtAuthGuard, PermissionsGuard],
+  exports: [AuthService, JwtAuthGuard, PermissionsGuard],
 })
 export class AuthModule {}

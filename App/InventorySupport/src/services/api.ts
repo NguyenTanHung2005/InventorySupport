@@ -1,51 +1,72 @@
 import { API_URL } from '../constants/config';
-import { AuthResponse, Product } from '../types';
 
-export async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
-  });
-  if (!response.ok) throw new Error((await response.text()) || `Request failed with status ${response.status}`);
-  return response.json() as Promise<T>;
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
 }
 
-export function login(email: string, password: string) {
-  return request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+type QueryValue = string | number | boolean | undefined | null;
+
+let unauthorizedHandler: (() => void) | undefined;
+/** AuthProvider đăng ký hàm này để tự đăng xuất khi token hết hạn hoặc tài khoản bị khóa. */
+export function setUnauthorizedHandler(handler: (() => void) | undefined) {
+  unauthorizedHandler = handler;
 }
 
-export function register(name: string, email: string, password: string) {
-  return request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, role: 'STAFF' }) });
+export interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  body?: unknown;
+  query?: Record<string, QueryValue>;
+  token?: string;
 }
 
-export function getProducts(token: string) { return request<Product[]>('/products', {}, token); }
-export function getLowStock(token: string) { return request<Product[]>('/inventory/low-stock', {}, token); }
-export function getProductByBarcode(token: string, barcode: string) { return request<Product>(`/products/barcode/${encodeURIComponent(barcode)}`, {}, token); }
-export function moveStock(token: string, productId: string, type: 'IMPORT' | 'EXPORT', quantity: number, reason: string) {
-  return request<Product>('/inventory/movement', { method: 'POST', body: JSON.stringify({ productId, type, quantity, reason }) }, token);
-}
-export function normalizeProduct(token: string, text: string) {
-  return request<{
-    name: string;
-    normalizedName: string;
-    category: string;
-    unit: string;
-    description: string;
-    confidence: number;
-    correctedText: string;
-    hasMultipleProductTypes: boolean;
-    suggestions: Array<{
-      name: string;
-      normalizedName: string;
-      category: string;
-      unit: string;
-      description: string;
-      confidence: number;
-      matchedTerms: string[];
-    }>;
-  }>('/ai/normalize-product', { method: 'POST', body: JSON.stringify({ text }) }, token);
+/** Hàm gọi API dùng chung: gắn JWT, chuyển query, và đọc thông báo lỗi tiếng Việt từ NestJS. */
+export async function request<T>(path: string, { method = 'GET', body, query, token }: RequestOptions = {}): Promise<T> {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value !== undefined && value !== null && value !== '') search.append(key, String(value));
+  }
+  const url = `${API_URL}${path}${search.size ? `?${search}` : ''}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(`Không kết nối được máy chủ (${API_URL}). Kiểm tra mạng hoặc EXPO_PUBLIC_API_URL.`, 0);
+  }
+
+  const text = await response.text();
+  const data = text ? safeJson(text) : undefined;
+  if (!response.ok) {
+    if (response.status === 401 && token) unauthorizedHandler?.();
+    const message = (data as { message?: string | string[] } | undefined)?.message;
+    throw new ApiError(
+      Array.isArray(message) ? message.join('\n') : message || text || `Lỗi ${response.status}`,
+      response.status,
+    );
+  }
+  return data as T;
 }
 
-export function createProduct(token: string, product: { barcode: string; name: string; description: string; category: string; unit: string; price?: number; minStock?: number }) {
-  return request<Product>('/products', { method: 'POST', body: JSON.stringify(product) }, token);
+function safeJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+/** Ảnh sản phẩm được lưu dạng đường dẫn tương đối `/uploads/...` trên backend. */
+export function resolveImageUrl(path?: string): string | undefined {
+  if (!path) return undefined;
+  return /^(https?:|data:|file:|blob:)/.test(path) ? path : `${API_URL}${path}`;
 }

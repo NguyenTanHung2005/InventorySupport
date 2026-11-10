@@ -1,11 +1,232 @@
-import { useEffect, useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useRoute } from '@react-navigation/native';
-import * as DocumentPicker from 'expo-document-picker';
-import * as XLSX from 'xlsx';
-import { getProducts, moveStock } from '../../services/api';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { ProductCard } from '../../components/ProductCard';
+import { Button, Card, ErrorBanner, Field, Segmented, SuccessBanner } from '../../components/ui';
+import { STOCK_TYPE_LABELS, STOCK_TYPE_PERMISSION } from '../../constants/permissions';
+import { colors } from '../../constants/theme';
+import type { RootStackParamList, TabParamList } from '../../navigation/types';
+import { inventoryService } from '../../services/inventory.service';
 import { productService } from '../../services/product.service';
-import { useAuth } from '../../store/auth.store';
+import { useAuth, useToken } from '../../store/auth.store';
+import { useNotifications } from '../../store/notification.store';
 import { Product, StockType } from '../../types';
-export function InventoryScreen() { const { token } = useAuth(); const route = useRoute<any>(); const [items, setItems] = useState<Product[]>([]); const [selected, setSelected] = useState<Product>(); const [type, setType] = useState<StockType>('IMPORT'); const [quantity, setQuantity] = useState('1'); const [reason, setReason] = useState(''); const [message, setMessage] = useState(''); const normalized = route.params?.normalizedProduct as { normalizedName: string; category: string; unit: string; description: string } | undefined; useEffect(() => { if (token) void getProducts(token).then((loaded) => { setItems(loaded); const productId = route.params?.productId as string | undefined; if (productId) setSelected(loaded.find((product) => product.id === productId)); }); }, [token, route.params?.productId]); async function createNormalized() { if (!token || !normalized) return; const created = await productService.create(token, { barcode: `AI-${Date.now()}`, name: normalized.normalizedName, description: normalized.description, category: normalized.category, unit: normalized.unit, minStock: 0 }); setItems((current) => [...current, created]); setSelected(created); setMessage('Đã chuyển thông tin AI thành sản phẩm nhập kho'); } async function importExcel() { if (!token) return; const selection = await DocumentPicker.getDocumentAsync({ type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'], copyToCacheDirectory: true }); if (selection.canceled) return; const file = selection.assets[0]; const workbook = XLSX.read(await (await fetch(file.uri)).arrayBuffer(), { type: 'array' }); const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[workbook.SheetNames[0]], { defval: '' }); let imported = 0; for (const row of rows) { const name = String(row.name ?? row.ten ?? row['Tên sản phẩm'] ?? '').trim(); if (!name) continue; await productService.create(token, { barcode: String(row.barcode ?? row['Mã barcode'] ?? `IMPORT-${Date.now()}-${imported}`), name, description: String(row.description ?? row['Mô tả'] ?? ''), category: String(row.category ?? row['Danh mục'] ?? 'Khác'), unit: String(row.unit ?? row['Đơn vị'] ?? 'cái'), price: Number(row.price ?? row['Giá'] ?? 0), minStock: Number(row.minStock ?? row['Tồn tối thiểu'] ?? 0) }); imported += 1; } const refreshed = await getProducts(token); setItems(refreshed); setMessage(`Đã nhập ${imported} sản phẩm từ Excel`); } async function submit() { if (!token || !selected) return; await moveStock(token, selected.id, type, Number(quantity), reason); setMessage('Cập nhật tồn kho thành công'); } return <SafeAreaView style={styles.page}><ScrollView contentContainerStyle={styles.content}><Text style={styles.intro}>Chọn sản phẩm để nhập hoặc xuất kho.</Text><Pressable style={styles.excelButton} onPress={importExcel}><Text style={styles.excelButtonText}>Nhập danh sách từ Excel</Text></Pressable>{normalized && !selected ? <View style={styles.aiPending}><Text style={styles.aiTitle}>Thông tin từ AI</Text><Text>{normalized.normalizedName}</Text><Text style={styles.meta}>{normalized.category} · {normalized.unit}</Text><Pressable style={styles.aiButton} onPress={createNormalized}><Text style={styles.buttonText}>Tạo sản phẩm từ thông tin này</Text></Pressable></View> : null}<ScrollView horizontal contentContainerStyle={styles.chips}>{items.map((p) => <Pressable key={p.id} onPress={() => setSelected(p)} style={[styles.chip, selected?.id === p.id && styles.active]}><Text>{p.name}</Text></Pressable>)}</ScrollView>{selected ? <Text style={styles.selected}>Đang chọn: {selected.name} · Tồn {selected.quantity}</Text> : null}<View style={styles.segment}><Pressable onPress={() => setType('IMPORT')} style={[styles.segmentItem, type === 'IMPORT' && styles.active]}><Text>Nhập kho</Text></Pressable><Pressable onPress={() => setType('EXPORT')} style={[styles.segmentItem, type === 'EXPORT' && styles.active]}><Text>Xuất kho</Text></Pressable></View><TextInput style={styles.input} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" placeholder="Số lượng" /><TextInput style={styles.input} value={reason} onChangeText={setReason} placeholder="Ghi chú" /><Pressable style={styles.button} onPress={submit}><Text style={styles.buttonText}>Xác nhận</Text></Pressable><Text>{message}</Text></ScrollView></SafeAreaView>; }
-const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: '#f5f7fb' }, content: { padding: 18, gap: 14 }, intro: { color: '#68758a' }, excelButton: { backgroundColor: '#217a4b', padding: 14, borderRadius: 10, alignItems: 'center' }, excelButtonText: { color: '#fff', fontWeight: '800' }, chips: { gap: 8 }, chip: { padding: 10, backgroundColor: '#fff', borderRadius: 10 }, active: { backgroundColor: '#b9d1ff' }, selected: { padding: 14, backgroundColor: '#edf5ff', borderRadius: 10 }, aiPending: { padding: 14, backgroundColor: '#effbf3', borderRadius: 12, gap: 6 }, aiTitle: { fontWeight: '800', color: '#217a4b' }, aiButton: { backgroundColor: '#217a4b', padding: 12, borderRadius: 9, alignItems: 'center', marginTop: 6 }, meta: { color: '#68758a', fontSize: 12 }, segment: { flexDirection: 'row', gap: 8 }, segmentItem: { flex: 1, padding: 13, alignItems: 'center', backgroundColor: '#fff', borderRadius: 10 }, input: { backgroundColor: '#fff', borderColor: '#e3e8f0', borderWidth: 1, borderRadius: 10, padding: 13 }, button: { backgroundColor: '#2f6fed', padding: 14, borderRadius: 10, alignItems: 'center' }, buttonText: { color: '#fff', fontWeight: '800' } });
+import { parseNumberInput } from '../../utils/format';
+
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<TabParamList, 'Inventory'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
+
+const REASONS: Record<StockType, string[]> = {
+  IMPORT: ['Nhập từ nhà cung cấp', 'Khách trả hàng'],
+  EXPORT: ['Bán lẻ', 'Hàng hỏng / hết hạn', 'Dùng nội bộ'],
+  ADJUSTMENT: ['Kiểm kê định kỳ', 'Hàng hỏng', 'Thất thoát'],
+};
+
+export function InventoryScreen({ route, navigation }: Props) {
+  const token = useToken();
+  const { can } = useAuth();
+  const { refresh: refreshNotifications } = useNotifications();
+  const allowedTypes = useMemo(
+    () => (['EXPORT', 'IMPORT', 'ADJUSTMENT'] as StockType[]).filter((type) => can(STOCK_TYPE_PERMISSION[type])),
+    [can],
+  );
+
+  const [type, setType] = useState<StockType>(allowedTypes[0] ?? 'EXPORT');
+  const [selected, setSelected] = useState<Product>();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [quantity, setQuantity] = useState('1');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Nhận sản phẩm/loại giao dịch từ màn chi tiết hoặc màn quét mã.
+  const { productId, type: requestedType, nonce } = route.params ?? {};
+  useEffect(() => {
+    if (!productId && !requestedType) return;
+    let cancelled = false;
+    (async () => {
+      const product = productId ? await productService.get(token, productId) : undefined;
+      if (cancelled) return;
+      if (requestedType && allowedTypes.includes(requestedType)) setType(requestedType);
+      setSuccess('');
+      setError('');
+      if (product) {
+        setSelected(product);
+        setQuantity(requestedType === 'ADJUSTMENT' ? String(product.quantity) : '1');
+      }
+    })().catch((cause: Error) => {
+      if (!cancelled) setError(cause.message);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, productId, requestedType, nonce, allowedTypes]);
+
+  // Tìm sản phẩm (debounce 300ms).
+  useEffect(() => {
+    if (selected) return;
+    const timer = setTimeout(() => {
+      setSearching(true);
+      productService
+        .list(token, { search: query.trim(), limit: 8, sort: 'name' })
+        .then((page) => setResults(page.items))
+        .catch((cause: Error) => setError(cause.message))
+        .finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [token, query, selected]);
+
+  const amount = parseNumberInput(quantity);
+  const isAdjustment = type === 'ADJUSTMENT';
+  const validationError = !selected
+    ? undefined
+    : amount === undefined || !Number.isInteger(amount) || amount < (isAdjustment ? 0 : 1)
+      ? isAdjustment ? 'Nhập số lượng thực tế (≥ 0)' : 'Số lượng phải là số nguyên ≥ 1'
+      : type === 'EXPORT' && amount > selected.quantity
+        ? `Chỉ còn ${selected.quantity} ${selected.unit} trong kho`
+        : isAdjustment && !reason.trim()
+          ? 'Kiểm kê cần ghi lý do chênh lệch'
+          : undefined;
+  const after = selected && amount !== undefined
+    ? isAdjustment ? amount : selected.quantity + (type === 'EXPORT' ? -amount : amount)
+    : undefined;
+
+  async function submit() {
+    if (!selected || validationError || amount === undefined) return;
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+    try {
+      const result = await inventoryService.move(token, { productId: selected.id, type, quantity: amount, reason: reason.trim() || undefined });
+      setSelected(result.product);
+      setSuccess(
+        `${STOCK_TYPE_LABELS[type]} thành công: ${result.product.name} còn ${result.product.quantity} ${result.product.unit}.` +
+          (result.alert ? `\n⚠ ${result.alert.message}` : ''),
+      );
+      setQuantity(isAdjustment ? String(result.product.quantity) : '1');
+      setReason('');
+      if (result.alert) void refreshNotifications();
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function changeProduct() {
+    setSelected(undefined);
+    setSuccess('');
+    setError('');
+    navigation.setParams({ productId: undefined, type: undefined });
+  }
+
+  if (!allowedTypes.length) {
+    return <View style={styles.page}><Text style={styles.meta}>Bạn không có quyền nhập/xuất kho.</Text></View>;
+  }
+
+  return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView style={styles.page} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {allowedTypes.length > 1 ? (
+          <Segmented
+            value={type}
+            onChange={(next) => {
+              setType(next);
+              setError('');
+              if (next === 'ADJUSTMENT' && selected) setQuantity(String(selected.quantity));
+            }}
+            options={allowedTypes.map((value) => ({ value, label: STOCK_TYPE_LABELS[value] }))}
+          />
+        ) : (
+          <Text style={styles.title}>{STOCK_TYPE_LABELS[type]}</Text>
+        )}
+
+        {selected ? (
+          <View style={{ gap: 8 }}>
+            <ProductCard product={selected} selected />
+            <Text style={styles.link} onPress={changeProduct}>Đổi sản phẩm</Text>
+          </View>
+        ) : (
+          <Card>
+            <Text style={styles.label}>Chọn sản phẩm</Text>
+            <TextInput
+              style={styles.search}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Tìm theo tên hoặc barcode"
+              placeholderTextColor="#9aa5b5"
+            />
+            <Button title="Quét mã để chọn" icon="📷" variant="ghost" onPress={() => navigation.navigate('Scanner')} />
+            {searching ? <ActivityIndicator color={colors.primary} /> : null}
+            {results.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onPress={() => {
+                  setSelected(product);
+                  setQuantity(isAdjustment ? String(product.quantity) : '1');
+                  setSuccess('');
+                }}
+              />
+            ))}
+            {!searching && !results.length ? <Text style={styles.meta}>Không tìm thấy sản phẩm.</Text> : null}
+          </Card>
+        )}
+
+        {selected ? (
+          <Card>
+            <Field
+              label={isAdjustment ? `Số lượng thực tế đếm được (${selected.unit})` : `Số lượng ${type === 'IMPORT' ? 'nhập' : 'xuất'} (${selected.unit})`}
+              value={quantity}
+              onChangeText={setQuantity}
+              keyboardType="number-pad"
+              error={validationError && quantity ? validationError : undefined}
+            />
+            {after !== undefined && !validationError ? (
+              <Text style={styles.preview}>
+                Tồn kho: {selected.quantity} → <Text style={{ fontWeight: '800', color: after <= selected.minStock ? colors.warning : colors.success }}>{after}</Text> {selected.unit}
+                {after <= selected.minStock ? '  (dưới mức tối thiểu)' : ''}
+              </Text>
+            ) : null}
+            <Field label={isAdjustment ? 'Lý do chênh lệch *' : 'Ghi chú'} value={reason} onChangeText={setReason} placeholder="Không bắt buộc" />
+            <View style={styles.reasons}>
+              {REASONS[type].map((item) => (
+                <Text key={item} style={styles.reasonChip} onPress={() => setReason(item)}>{item}</Text>
+              ))}
+            </View>
+            <Button
+              title={`Xác nhận ${STOCK_TYPE_LABELS[type].toLowerCase()}`}
+              variant={type === 'EXPORT' ? 'danger' : type === 'IMPORT' ? 'success' : 'primary'}
+              loading={submitting}
+              disabled={Boolean(validationError)}
+              onPress={submit}
+            />
+          </Card>
+        ) : null}
+
+        <SuccessBanner message={success} />
+        <ErrorBanner message={error} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.background },
+  content: { padding: 16, gap: 12, paddingBottom: 40 },
+  title: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  label: { color: colors.text, fontWeight: '800' },
+  meta: { color: colors.muted, padding: 16 },
+  link: { color: colors.primary, fontWeight: '700', textAlign: 'right' },
+  search: { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, color: colors.text },
+  preview: { color: colors.text },
+  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  reasonChip: { color: colors.primary, backgroundColor: colors.primarySoft, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 12, fontSize: 12, overflow: 'hidden' },
+});

@@ -1,8 +1,44 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors } from '../constants/theme';
 import { Product } from '../types';
+import { formatMoney } from '../utils/format';
+import { ProductImage } from './ProductImage';
 
-export function ProductCard({ product, onPress }: { product: Product; onPress?: () => void }) {
-  const content = <View style={styles.row}><View style={styles.icon}><Text style={styles.iconText}>{product.name.charAt(0)}</Text></View><View style={styles.info}><Text style={styles.name}>{product.name}</Text><Text style={styles.meta}>{product.category} · {product.barcode}</Text></View><View><Text style={product.quantity <= product.minStock ? styles.warning : styles.quantity}>{product.quantity}</Text><Text style={styles.meta}>{product.unit}</Text></View></View>;
-  return onPress ? <Pressable onPress={onPress}>{content}</Pressable> : content;
+export function ProductCard({ product, onPress, selected }: { product: Product; onPress?: () => void; selected?: boolean }) {
+  const low = product.quantity <= product.minStock;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [styles.row, selected && styles.selected, pressed && onPress && styles.pressed]}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
+      <ProductImage uri={product.imageUrl} name={product.name} />
+      <View style={styles.info}>
+        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+        <Text style={styles.meta} numberOfLines={1}>{product.category} · {product.barcode}</Text>
+        <Text style={styles.price}>{formatMoney(product.price)}</Text>
+      </View>
+      <View style={styles.stock}>
+        <Text style={[styles.quantity, product.quantity === 0 ? styles.danger : low ? styles.warning : null]}>
+          {product.quantity}
+        </Text>
+        <Text style={styles.meta}>{product.unit}</Text>
+      </View>
+    </Pressable>
+  );
 }
-const styles = StyleSheet.create({ row: { backgroundColor: '#fff', borderRadius: 14, padding: 13, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e3e8f0' }, icon: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#e8efff', alignItems: 'center', justifyContent: 'center' }, iconText: { color: '#2f6fed', fontWeight: '800', fontSize: 18 }, info: { flex: 1, marginLeft: 12 }, name: { color: '#17233b', fontWeight: '700' }, meta: { color: '#68758a', fontSize: 12, marginTop: 4 }, quantity: { color: '#17233b', fontWeight: '800', fontSize: 18, textAlign: 'right' }, warning: { color: '#b7791f', fontWeight: '800', fontSize: 18, textAlign: 'right' } });
+
+const styles = StyleSheet.create({
+  row: { backgroundColor: colors.surface, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, gap: 12 },
+  selected: { borderColor: colors.primary, borderWidth: 2, backgroundColor: '#f3f7ff' },
+  pressed: { opacity: 0.85 },
+  info: { flex: 1 },
+  name: { color: colors.text, fontWeight: '700' },
+  meta: { color: colors.muted, fontSize: 12, marginTop: 3 },
+  price: { color: colors.primary, fontWeight: '700', marginTop: 4, fontSize: 13 },
+  stock: { alignItems: 'flex-end', minWidth: 48 },
+  quantity: { color: colors.text, fontWeight: '800', fontSize: 18 },
+  warning: { color: colors.warning },
+  danger: { color: colors.danger },
+});

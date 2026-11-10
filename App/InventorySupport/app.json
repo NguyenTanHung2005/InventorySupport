@@ -12,6 +12,19 @@
         {
           "cameraPermission": "Cho phép Inventory Support sử dụng camera để quét mã sản phẩm."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Cho phép Inventory Support chụp ảnh sản phẩm để nhận diện bằng AI.",
+          "photosPermission": "Cho phép Inventory Support chọn ảnh sản phẩm từ thư viện."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#2f6fed"
+        }
       ]
     ],
     "ios": {
