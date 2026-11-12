@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Chip, Field } from '../../components/ui';
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../constants/config';
+import { API_URL, DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../constants/config';
 import { colors } from '../../constants/theme';
 
 export function LoginScreen({
@@ -45,7 +45,38 @@ export function LoginScreen({
       <Pressable onPress={onRegister}>
         <Text style={styles.link}>Chưa có tài khoản? Đăng ký</Text>
       </Pressable>
+      <ServerStatus />
     </AuthLayout>
+  );
+}
+
+/** Hiển thị địa chỉ máy chủ và trạng thái kết nối để dễ chẩn đoán lỗi trên simulator/điện thoại. */
+function ServerStatus() {
+  const [status, setStatus] = useState<'checking' | 'ok' | 'fail'>('checking');
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    fetch(`${API_URL}/health`, { signal: controller.signal })
+      .then((response) => !cancelled && setStatus(response.ok ? 'ok' : 'fail'))
+      .catch(() => !cancelled && setStatus('fail'))
+      .finally(() => clearTimeout(timer));
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, []);
+  return (
+    <View style={styles.server}>
+      <Text style={styles.hint}>
+        Máy chủ: {API_URL} · {status === 'checking' ? 'đang kiểm tra...' : status === 'ok' ? '🟢 đã kết nối' : '🔴 không kết nối được'}
+      </Text>
+      {status === 'fail' ? (
+        <Text style={styles.hint}>
+          Kiểm tra backend đã chạy, điện thoại cùng mạng Wi-Fi, tường lửa cho phép cổng 3000, hoặc đặt EXPO_PUBLIC_API_URL.
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -86,5 +117,6 @@ const styles = StyleSheet.create({
   subtitle: { color: '#b8c5da', marginTop: 6 },
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 20, gap: 12 },
   chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  server: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, gap: 4 },
   notice: { backgroundColor: colors.successSoft, color: colors.success, padding: 10, borderRadius: 10 },
 });

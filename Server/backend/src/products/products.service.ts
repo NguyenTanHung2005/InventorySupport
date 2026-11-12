@@ -13,7 +13,9 @@ import {
   parsePageQuery,
   requiredString,
 } from '../common/validation.js';
+import QRCode from 'qrcode';
 import { isOwnUploadPath } from '../uploads/upload-paths.js';
+import { buildProductQrPayload, numericVariants, parseScanCode, type ParsedScanCode } from './scan-code.js';
 import { CreateProductDto, ProductQuery, UpdateProductDto } from './dto/create-product.dto.js';
 
 /** Bỏ dấu tiếng Việt để tìm kiếm "mi hao hao" vẫn ra "Mì Hảo Hảo". */
@@ -68,17 +70,51 @@ export class ProductsService {
   }
 
   findByBarcode(barcode: string, user: AuthUser): Product {
-    const code = barcode.trim();
-    const product = this.active(user).find((candidate) => candidate.barcode === code);
+    const product = this.findByCandidates(user, numericVariants(barcode.trim()));
     if (!product) throw new NotFoundException('Mã barcode chưa tồn tại');
     return product;
+  }
+
+  /**
+   * Phân tích chuỗi quét (mã vạch, tem QR của app, GS1 Digital Link...) rồi tìm sản phẩm.
+   * Không ném 404 khi không thấy: "chưa có" là một kết quả hợp lệ của việc quét.
+   */
+  resolve(raw: string, user: AuthUser): ParsedScanCode & { product: Product | null } {
+    if (!raw?.trim()) throw new BadRequestException('Thiếu mã cần tra');
+    const parsed = parseScanCode(raw);
+    return { ...parsed, product: this.findByCandidates(user, parsed.candidates) ?? null };
+  }
+
+  /** Dữ liệu tem QR để in dán lên kệ/sản phẩm (docs/SCAN.md mục 2.4). */
+  async label(id: string, user: AuthUser) {
+    const product = this.findById(id, user);
+    const payload = buildProductQrPayload(product.barcode);
+    const qrDataUrl = await QRCode.toDataURL(payload, { errorCorrectionLevel: 'M', margin: 1, width: 360 });
+    return {
+      productId: product.id,
+      name: product.name,
+      barcode: product.barcode,
+      price: product.price,
+      unit: product.unit,
+      payload,
+      qrDataUrl,
+    };
+  }
+
+  private findByCandidates(user: AuthUser, candidates: string[]): Product | undefined {
+    const products = this.active(user);
+    for (const code of candidates) {
+      const product = products.find((candidate) => candidate.barcode === code);
+      if (product) return product;
+    }
+    return undefined;
   }
 
   /** Tìm sản phẩm có sẵn khớp với gợi ý của AI (theo barcode hoặc tên). */
   match(user: AuthUser, hint: { barcode?: string; name: string }): Product[] {
     const products = this.active(user);
     if (hint.barcode) {
-      const exact = products.find((product) => product.barcode === hint.barcode);
+      const exact = this.findByCandidates(user, numericVariants(hint.barcode));
       if (exact) return [exact];
     }
     const words = searchKey(hint.name).split(/\s+/).filter((word) => word.length > 1);

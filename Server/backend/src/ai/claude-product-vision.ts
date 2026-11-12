@@ -58,6 +58,46 @@ Nhiệm vụ: xác định sản phẩm và trả về thông tin chuẩn hóa �
 - Nếu ảnh không chứa sản phẩm bán lẻ nào, trả về suggestions rỗng.
 - Hạ "confidence" khi chữ trên bao bì mờ hoặc bạn phải suy đoán.`;
 
+const INVOICE_SCHEMA = {
+  type: 'object',
+  properties: {
+    readable: { type: 'boolean', description: 'false nếu ảnh không phải phiếu/hóa đơn hàng hóa hoặc quá mờ để đọc' },
+    supplier: { type: 'string', description: 'Tên nhà cung cấp/người bán, rỗng nếu không có' },
+    date: { type: 'string', description: 'Ngày trên phiếu dạng YYYY-MM-DD, rỗng nếu không có' },
+    lines: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Tên hàng như in trên phiếu' },
+          quantity: { type: 'number', description: 'Số lượng theo đơn vị tính của dòng' },
+          unit: { type: 'string', description: 'Đơn vị tính in trên phiếu: chai, thùng, gói...; rỗng nếu không có' },
+          unitPrice: { type: 'number', description: 'Đơn giá VND, 0 nếu không có' },
+          barcode: { type: 'string', description: 'Mã vạch/mã hàng dạng số nếu in rõ trên dòng, rỗng nếu không' },
+          confidence: { type: 'number', description: 'Độ tin cậy 0..1 cho dòng này' },
+        },
+        required: ['name', 'quantity', 'unit', 'unitPrice', 'barcode', 'confidence'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['readable', 'supplier', 'date', 'lines'],
+  additionalProperties: false,
+} as const;
+
+export interface ClaudeInvoiceResult {
+  readable: boolean;
+  supplier: string;
+  date: string;
+  lines: Array<{ name: string; quantity: number; unit: string; unitPrice: number; barcode: string; confidence: number }>;
+}
+
+const INVOICE_PROMPT = `Bạn đọc phiếu giao hàng / hóa đơn nhập hàng cho cửa hàng tạp hóa nhỏ tại Việt Nam.
+- Mỗi dòng hàng hóa là một phần tử trong "lines"; bỏ qua dòng tổng cộng, thuế, chiết khấu, phí vận chuyển.
+- Đọc đúng số lượng và đơn giá như in trên phiếu (chữ viết tay cũng đọc nếu rõ). Dấu chấm trong số tiền là phân cách hàng nghìn.
+- Không đoán: chữ không đọc được thì hạ confidence; mã vạch chỉ điền khi đọc đủ dãy số.
+- Nếu ảnh không phải phiếu hàng hóa, đặt readable=false và lines rỗng.`;
+
 export class ClaudeProductVision {
   private readonly client = new Anthropic();
   private readonly model = process.env.AI_MODEL ?? 'claude-opus-5-5';
@@ -89,6 +129,52 @@ export class ClaudeProductVision {
     ]);
   }
 
+  /** Đọc phiếu giao hàng / hóa đơn nhập (docs/SCAN.md mục 3.2). */
+  async readDeliveryNote(image: { base64: string; mediaType: ImageMediaType }): Promise<ClaudeInvoiceResult> {
+    const response = await this.client.beta.messages.parse({
+      model: this.model,
+      // Phiếu có thể nhiều dòng; chừa chỗ cho cả phần suy luận.
+      max_tokens: 16000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      output_config: { effort: 'low', format: betaJSONSchemaOutputFormat(INVOICE_SCHEMA) },
+      system: INVOICE_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.base64 } },
+            { type: 'text', text: 'Trích các dòng hàng hóa trên phiếu này.' },
+          ],
+        },
+      ],
+    });
+    const output = this.checkParsed(response) as ClaudeInvoiceResult;
+    return {
+      supplier: output.supplier.trim(),
+      date: output.date.trim(),
+      readable: output.readable,
+      lines: output.lines.slice(0, 100).map((line) => ({
+        name: line.name.trim(),
+        quantity: Math.max(0, Math.round(Number(line.quantity) || 0)),
+        unit: line.unit.trim(),
+        unitPrice: Math.max(0, Number(line.unitPrice) || 0),
+        barcode: /^\d{6,14}$/.test(line.barcode.trim()) ? line.barcode.trim() : '',
+        confidence: Math.min(1, Math.max(0, Number(line.confidence) || 0)),
+      })),
+    };
+  }
+
+  private checkParsed(response: { stop_reason: string | null; parsed_output: unknown }): unknown {
+    if (response.stop_reason === 'refusal') {
+      throw new Error('AI từ chối xử lý yêu cầu này');
+    }
+    if (!response.parsed_output) {
+      throw new Error(`AI không trả về kết quả hợp lệ (stop_reason: ${response.stop_reason})`);
+    }
+    return response.parsed_output;
+  }
+
   private async run(content: Anthropic.Beta.BetaContentBlockParam[]): Promise<ClaudeProductResult> {
     const response = await this.client.beta.messages.parse({
       model: this.model,
@@ -102,13 +188,7 @@ export class ClaudeProductVision {
       messages: [{ role: 'user', content }],
     });
 
-    if (response.stop_reason === 'refusal') {
-      throw new Error('AI từ chối xử lý yêu cầu này');
-    }
-    if (!response.parsed_output) {
-      throw new Error(`AI không trả về kết quả hợp lệ (stop_reason: ${response.stop_reason})`);
-    }
-    const output = response.parsed_output as ClaudeProductResult;
+    const output = this.checkParsed(response) as ClaudeProductResult;
     return {
       correctedText: output.correctedText,
       suggestions: output.suggestions.slice(0, 5).map((item) => ({

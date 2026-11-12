@@ -1,4 +1,4 @@
-import { AppNotification, InventorySummary, Paginated, Product, StockTransaction, StockType } from '../types';
+import { AppNotification, InventorySummary, Paginated, Product, StockBatchResult, StockTransaction, StockType } from '../types';
 import { request } from './api';
 
 export interface TransactionQuery {
@@ -17,6 +17,10 @@ export const inventoryService = {
       token,
       body: input,
     }),
+
+  /** Nhiều dòng cùng loại; backend kiểm tra hết rồi mới ghi (tất cả hoặc không). */
+  batch: (token: string, input: { type: StockType; reason?: string; items: { productId: string; quantity: number }[] }) =>
+    request<StockBatchResult>('/inventory/batch', { method: 'POST', token, body: input }),
 
   lowStock: (token: string) => request<Product[]>('/inventory/low-stock', { token }),
 

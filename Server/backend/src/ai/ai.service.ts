@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import { readFileSync } from 'node:fs';
 import { isOwnUploadPath, resolveUploadPath } from '../uploads/upload-paths.js';
-import { ClaudeProductResult, ClaudeProductVision, ImageMediaType } from './claude-product-vision.js';
+import {
+  ClaudeInvoiceResult,
+  ClaudeProductResult,
+  ClaudeProductVision,
+  ImageMediaType,
+} from './claude-product-vision.js';
 import { NormalizeProductDto } from './dto/normalize-product.dto.js';
 
 export interface NormalizedProduct {
@@ -63,12 +68,23 @@ export class AiService {
     }
   }
 
-  /** Nhận diện sản phẩm từ ảnh đã tải lên `/uploads/...`. Bắt buộc có AI provider. */
-  async scanImage(imageUrl: string, storeId: string, categories: string[], note?: string): Promise<NormalizeResult> {
+  /** Đọc phiếu giao hàng / hóa đơn nhập từ ảnh đã tải lên (docs/SCAN.md mục 3.2). */
+  async scanInvoice(imageUrl: string, storeId: string): Promise<ClaudeInvoiceResult> {
+    const image = this.loadImage(imageUrl, storeId);
+    try {
+      return await this.getVision().readDeliveryNote(image);
+    } catch (error) {
+      this.logger.error(`Đọc phiếu nhập thất bại: ${(error as Error).message}`);
+      throw new ServiceUnavailableException('AI chưa đọc được phiếu, vui lòng chụp thẳng, đủ sáng và thử lại');
+    }
+  }
+
+  /** Kiểm tra quyền sở hữu ảnh + cấu hình AI, rồi đọc ảnh thành base64. */
+  private loadImage(imageUrl: string, storeId: string): { base64: string; mediaType: ImageMediaType } {
     if (!isOwnUploadPath(imageUrl, storeId)) throw new BadRequestException('Ảnh không hợp lệ');
     if (!this.providerEnabled) {
       throw new ServiceUnavailableException(
-        'Chưa cấu hình AI nhận diện ảnh (thiếu ANTHROPIC_API_KEY trên server). Hãy quét barcode hoặc nhập mô tả bằng chữ.',
+        'Chưa cấu hình AI nhận diện ảnh (thiếu ANTHROPIC_API_KEY trên server). Hãy quét mã vạch hoặc nhập bằng tay.',
       );
     }
     let base64: string;
@@ -77,9 +93,14 @@ export class AiService {
     } catch {
       throw new BadRequestException('Không tìm thấy ảnh đã tải lên');
     }
-    const mediaType = MEDIA_TYPES[imageUrl.split('.').pop() ?? ''] ?? 'image/jpeg';
+    return { base64, mediaType: MEDIA_TYPES[imageUrl.split('.').pop() ?? ''] ?? 'image/jpeg' };
+  }
+
+  /** Nhận diện sản phẩm từ ảnh đã tải lên `/uploads/...`. Bắt buộc có AI provider. */
+  async scanImage(imageUrl: string, storeId: string, categories: string[], note?: string): Promise<NormalizeResult> {
+    const image = this.loadImage(imageUrl, storeId);
     try {
-      const result = await this.getVision().analyzeImage({ base64, mediaType }, categories, note?.slice(0, 300));
+      const result = await this.getVision().analyzeImage(image, categories, note?.slice(0, 300));
       return this.fromProvider(result, result.correctedText || 'Ảnh sản phẩm');
     } catch (error) {
       this.logger.error(`Nhận diện ảnh thất bại: ${(error as Error).message}`);

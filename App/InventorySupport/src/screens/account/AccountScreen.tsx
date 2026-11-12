@@ -47,7 +47,7 @@ export function AccountScreen() {
         />
       ) : null}
       {can('AI_USE') ? (
-        <Button title="Trợ lý AI chuẩn hóa sản phẩm" icon="✨" variant="secondary" onPress={() => navigation.navigate('AiAssistant')} />
+        <Button title="Trợ lý AI" icon="✨" variant="secondary" onPress={() => navigation.navigate('AiAssistant')} />
       ) : null}
       <Button title="Đổi mật khẩu" variant="ghost" onPress={() => navigation.navigate('ChangePassword')} />
       <Button title="Đăng xuất" variant="danger" onPress={signOut} />

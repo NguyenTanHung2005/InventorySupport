@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -193,6 +194,53 @@ describe('Inventory Support API (e2e)', () => {
     });
   });
 
+  describe('AI assistant (offline mode)', () => {
+    beforeEach(() => {
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      vi.stubEnv('ANTHROPIC_AUTH_TOKEN', '');
+    });
+    afterEach(() => vi.unstubAllEnvs());
+
+    it('answers low-stock questions and keeps a session', async () => {
+      const first = await api().post('/ai/assistant/chat').set(as('manager')).send({ message: 'Hàng nào sắp hết?' }).expect(201);
+      expect(first.body).toMatchObject({ provider: 'offline', turn: 1 });
+      expect(first.body.reply).toContain('Mì Hảo Hảo');
+      expect(first.body.products.length).toBeGreaterThan(0);
+
+      const second = await api()
+        .post('/ai/assistant/chat')
+        .set(as('manager'))
+        .send({ sessionId: first.body.sessionId, message: 'tổng quan hôm nay' })
+        .expect(201);
+      expect(second.body.turn).toBe(2);
+
+      await api().delete(`/ai/assistant/sessions/${first.body.sessionId}`).set(as('manager')).expect(200);
+      await api()
+        .post('/ai/assistant/chat')
+        .set(as('manager'))
+        .send({ sessionId: first.body.sessionId, message: 'còn không?' })
+        .expect(404);
+    });
+
+    it('proposes actions only within the user permissions', async () => {
+      const staffExport = await api().post('/ai/assistant/chat').set(as('staff')).send({ message: 'xuất 2 chai coca' }).expect(201);
+      expect(staffExport.body.actions[0]).toMatchObject({ kind: 'STOCK_MOVEMENT', type: 'EXPORT', quantity: 2 });
+
+      const staffImport = await api().post('/ai/assistant/chat').set(as('staff')).send({ message: 'nhập 10 coca' }).expect(201);
+      expect(staffImport.body.actions).toHaveLength(0);
+      expect(staffImport.body.reply).toMatch(/không có quyền/);
+
+      // Thẻ đề xuất không tự ghi dữ liệu.
+      const product = await api().get('/products/product-1').set(as('staff')).expect(200);
+      expect(product.body.quantity).toBe(24);
+    });
+
+    it('validates input', async () => {
+      await api().post('/ai/assistant/chat').set(as('staff')).send({ message: '   ' }).expect(400);
+      await api().post('/ai/assistant/chat').set(as('staff')).send({ message: 'x'.repeat(1001) }).expect(400);
+    });
+  });
+
   describe('uploads', () => {
     it('stores a valid image and rejects fake content', async () => {
       const ok = await api()
@@ -213,6 +261,84 @@ describe('Inventory Support API (e2e)', () => {
         .set(as('manager'))
         .send({ name: 'Ảnh ngoài', imageUrl: 'https://evil.example/x.png' })
         .expect(400);
+    });
+  });
+
+  describe('scanning (docs/SCAN.md)', () => {
+    const resolve = (raw: string, role = 'staff') =>
+      api().get('/products/resolve').query({ raw }).set(as(role)).expect(200);
+
+    it('resolves barcodes, app QR labels and GS1 Digital Links to the same product', async () => {
+      for (const raw of ['8934588012345', 'IS:P:8934588012345', 'https://id.gs1.org/01/08934588012345']) {
+        const result = await resolve(raw);
+        expect(result.body.product?.id).toBe('product-1');
+      }
+      const unknown = await resolve('https://shop.vn/khuyen-mai');
+      expect(unknown.body).toMatchObject({ format: 'TEXT', product: null });
+      await api().get('/products/resolve').set(as('staff')).expect(400);
+    });
+
+    it('creates a QR label that scans back to the product', async () => {
+      const label = await api().get('/products/product-2/label').set(as('staff')).expect(200);
+      expect(label.body.payload).toBe('IS:P:8934563138165');
+      expect(label.body.qrDataUrl).toMatch(/^data:image\/png;base64,/);
+      expect((await resolve(label.body.payload)).body.product.id).toBe('product-2');
+    });
+
+    it('applies a batch atomically', async () => {
+      // Dòng 2 xuất vượt tồn -> không dòng nào được ghi.
+      const failed = await api()
+        .post('/inventory/batch')
+        .set(as('staff'))
+        .send({ type: 'EXPORT', items: [{ productId: 'product-1', quantity: 2 }, { productId: 'product-2', quantity: 999 }] })
+        .expect(400);
+      expect(failed.body.message).toMatch(/Dòng 2/);
+      expect((await api().get('/products/product-1').set(as('staff'))).body.quantity).toBe(24);
+
+      const ok = await api()
+        .post('/inventory/batch')
+        .set(as('staff'))
+        .send({ type: 'EXPORT', reason: 'Bán lẻ', items: [{ productId: 'product-1', quantity: 2 }, { productId: 'product-2', quantity: 1 }] })
+        .expect(201);
+      expect(ok.body.count).toBe(2);
+      expect(ok.body.products.map((product: { quantity: number }) => product.quantity)).toEqual([22, 5]);
+    });
+
+    it('enforces permissions and input rules on batches', async () => {
+      await api()
+        .post('/inventory/batch')
+        .set(as('staff'))
+        .send({ type: 'ADJUSTMENT', reason: 'Kiểm kê', items: [{ productId: 'product-1', quantity: 20 }] })
+        .expect(403);
+      await api()
+        .post('/inventory/batch')
+        .set(as('manager'))
+        .send({ type: 'IMPORT', items: [{ productId: 'product-1', quantity: 1 }, { productId: 'product-1', quantity: 2 }] })
+        .expect(400);
+      await api().post('/inventory/batch').set(as('manager')).send({ type: 'IMPORT', items: [] }).expect(400);
+
+      const counted = await api()
+        .post('/inventory/batch')
+        .set(as('manager'))
+        .send({ type: 'ADJUSTMENT', reason: 'Kiểm kê bằng quét mã', items: [{ productId: 'product-1', quantity: 20 }] })
+        .expect(201);
+      expect(counted.body.transactions[0]).toMatchObject({ quantityBefore: 24, quantityAfter: 20, quantity: -4 });
+    });
+
+    it('requires import permission and a configured AI to read invoices', async () => {
+      vi.stubEnv('ANTHROPIC_API_KEY', '');
+      vi.stubEnv('ANTHROPIC_AUTH_TOKEN', '');
+      try {
+        const upload = await api()
+          .post('/uploads/image')
+          .set(as('manager'))
+          .send({ base64: PNG_BASE64, mimeType: 'image/png' })
+          .expect(201);
+        await api().post('/ai/scan-invoice').set(as('staff')).send({ imageUrl: upload.body.url }).expect(403);
+        await api().post('/ai/scan-invoice').set(as('manager')).send({ imageUrl: upload.body.url }).expect(503);
+      } finally {
+        vi.unstubAllEnvs();
+      }
     });
   });
 });

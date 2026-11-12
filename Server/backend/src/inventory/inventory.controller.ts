@@ -4,7 +4,7 @@ import { Permission } from '../common/permissions.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
 import { RequirePermissions } from '../auth/permissions.decorator.js';
-import { StockMovementDto } from './dto/stock-movement.dto.js';
+import { StockBatchDto, StockMovementDto } from './dto/stock-movement.dto.js';
 import type { TransactionQuery } from './dto/stock-movement.dto.js';
 import { InventoryService } from './inventory.service.js';
 
@@ -17,6 +17,12 @@ export class InventoryController {
   @Post('movement')
   move(@Body() dto: StockMovementDto, @Req() request: AuthenticatedRequest) {
     return this.inventoryService.move(dto, request.user);
+  }
+
+  /** Nhiều dòng cùng loại (quét liên tục, đọc phiếu nhập). Tất cả hoặc không. */
+  @Post('batch')
+  moveBatch(@Body() dto: StockBatchDto, @Req() request: AuthenticatedRequest) {
+    return this.inventoryService.moveBatch(dto, request.user);
   }
 
   @Get('low-stock')

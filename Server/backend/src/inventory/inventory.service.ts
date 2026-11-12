@@ -17,7 +17,9 @@ import {
 } from '../common/validation.js';
 import { ProductsService } from '../products/products.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
-import { StockMovementDto, TransactionQuery } from './dto/stock-movement.dto.js';
+import { StockBatchDto, StockMovementDto, TransactionQuery } from './dto/stock-movement.dto.js';
+
+const MAX_BATCH_ITEMS = 200;
 
 const PERMISSION_BY_TYPE: Record<StockTransactionType, Permission> = {
   [StockTransactionType.IMPORT]: Permission.STOCK_IMPORT,
@@ -34,7 +36,46 @@ export class InventoryService {
   ) {}
 
   move(dto: StockMovementDto, user: AuthUser) {
-    const type = requiredEnum(dto.type, Object.values(StockTransactionType), 'Loại giao dịch');
+    const type = this.checkType(dto.type, user);
+    const reason = this.checkReason(type, dto.reason);
+    const planned = this.plan(user, type, dto.productId, dto.quantity);
+    const result = this.apply(user, type, planned, reason);
+    this.database.save();
+    return result;
+  }
+
+  /**
+   * Nhập / xuất / kiểm kê nhiều sản phẩm một lần (docs/SCAN.md mục 2.3).
+   * Kiểm tra TẤT CẢ dòng trước, chỉ ghi khi mọi dòng hợp lệ: không có trạng thái ghi dở.
+   */
+  moveBatch(dto: StockBatchDto, user: AuthUser) {
+    const type = this.checkType(dto.type, user);
+    const reason = this.checkReason(type, dto.reason);
+    if (!Array.isArray(dto.items) || !dto.items.length) throw new BadRequestException('Danh sách sản phẩm trống');
+    if (dto.items.length > MAX_BATCH_ITEMS) throw new BadRequestException(`Tối đa ${MAX_BATCH_ITEMS} dòng mỗi lần`);
+    const ids = dto.items.map((item) => String(item?.productId ?? ''));
+    if (new Set(ids).size !== ids.length) throw new BadRequestException('Một sản phẩm xuất hiện nhiều lần trong danh sách');
+
+    const planned = dto.items.map((item, index) => {
+      try {
+        return this.plan(user, type, item?.productId, item?.quantity);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'không hợp lệ';
+        throw new BadRequestException(`Dòng ${index + 1}: ${message}`);
+      }
+    });
+    const results = planned.map((item) => this.apply(user, type, item, reason));
+    this.database.save();
+    return {
+      count: results.length,
+      transactions: results.map((result) => result.transaction),
+      products: results.map((result) => result.product),
+      alerts: results.flatMap((result) => (result.alert ? [result.alert] : [])),
+    };
+  }
+
+  private checkType(value: unknown, user: AuthUser): StockTransactionType {
+    const type = requiredEnum(value, Object.values(StockTransactionType), 'Loại giao dịch');
     if (!hasPermission(user.role, PERMISSION_BY_TYPE[type])) {
       throw new ForbiddenException(
         type === StockTransactionType.IMPORT
@@ -44,15 +85,35 @@ export class InventoryService {
             : 'Bạn không có quyền kiểm kê',
       );
     }
-    const product = this.products.findById(requiredString(dto.productId, 'Sản phẩm'), user);
-    const isAdjustment = type === StockTransactionType.ADJUSTMENT;
-    const quantity = requiredNumber(dto.quantity, 'Số lượng', { min: isAdjustment ? 0 : 1, integer: true });
-    const reason = optionalString(dto.reason, 'Ghi chú', 300);
-    if (isAdjustment && !reason) throw new BadRequestException('Kiểm kê cần ghi rõ lý do chênh lệch');
-    if (type === StockTransactionType.EXPORT && product.quantity < quantity) {
-      throw new BadRequestException(`Số lượng xuất vượt quá tồn kho (còn ${product.quantity} ${product.unit})`);
-    }
+    return type;
+  }
 
+  private checkReason(type: StockTransactionType, value: unknown): string | undefined {
+    const reason = optionalString(value, 'Ghi chú', 300);
+    if (type === StockTransactionType.ADJUSTMENT && !reason) {
+      throw new BadRequestException('Kiểm kê cần ghi rõ lý do chênh lệch');
+    }
+    return reason;
+  }
+
+  /** Kiểm tra một dòng, chưa ghi gì. */
+  private plan(user: AuthUser, type: StockTransactionType, productId: unknown, rawQuantity: unknown) {
+    const product = this.products.findById(requiredString(productId, 'Sản phẩm'), user);
+    const isAdjustment = type === StockTransactionType.ADJUSTMENT;
+    const quantity = requiredNumber(rawQuantity, 'Số lượng', { min: isAdjustment ? 0 : 1, integer: true });
+    if (type === StockTransactionType.EXPORT && product.quantity < quantity) {
+      throw new BadRequestException(`Số lượng xuất vượt quá tồn kho (${product.name} còn ${product.quantity} ${product.unit})`);
+    }
+    return { product, quantity };
+  }
+
+  private apply(
+    user: AuthUser,
+    type: StockTransactionType,
+    { product, quantity }: { product: Product; quantity: number },
+    reason?: string,
+  ) {
+    const isAdjustment = type === StockTransactionType.ADJUSTMENT;
     const before = product.quantity;
     const after = isAdjustment
       ? quantity
@@ -76,7 +137,7 @@ export class InventoryService {
     };
     this.database.transactions.push(transaction);
     const alert = this.notifications.onStockChanged(product, before);
-    this.database.save();
+    // Nơi gọi (move / moveBatch) lưu file một lần sau khi ghi xong.
     return { product, transaction, alert };
   }
 

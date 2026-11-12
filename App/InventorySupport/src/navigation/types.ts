@@ -19,7 +19,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   Users: undefined;
   UserForm: { user?: AuthUser } | undefined;
-  AiAssistant: undefined;
+  AiAssistant: { mode?: 'chat' | 'normalize' } | undefined;
   ChangePassword: undefined;
 };
 

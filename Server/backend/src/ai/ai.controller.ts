@@ -7,6 +7,8 @@ import { RequirePermissions } from '../auth/permissions.decorator.js';
 import { ProductsService } from '../products/products.service.js';
 import { NormalizeProductDto, ScanImageDto } from './dto/normalize-product.dto.js';
 import { AiService } from './ai.service.js';
+import { AssistantService } from './assistant/assistant.service.js';
+import { MAX_TURNS } from './assistant/assistant-session.store.js';
 
 @Controller('ai')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -15,11 +17,19 @@ export class AiController {
   constructor(
     private readonly aiService: AiService,
     private readonly productsService: ProductsService,
+    private readonly assistant: AssistantService,
   ) {}
 
   @Get('status')
   status() {
-    return { provider: this.aiService.providerEnabled ? 'claude' : 'heuristic' };
+    return {
+      provider: this.aiService.providerEnabled ? 'claude' : 'heuristic',
+      assistant: {
+        provider: this.assistant.provider,
+        model: this.assistant.provider === 'claude' ? this.assistant.model : undefined,
+        maxTurns: MAX_TURNS,
+      },
+    };
   }
 
   @Post('normalize-product')
@@ -45,6 +55,26 @@ export class AiController {
           barcode: suggestion.barcode,
           name: suggestion.normalizedName,
         }),
+      })),
+    };
+  }
+
+  /**
+   * Đọc phiếu nhập: AI trích dòng hàng, backend đối chiếu với kho. KHÔNG ghi dữ liệu;
+   * mobile cho người dùng duyệt rồi mới gọi POST /inventory/batch.
+   */
+  @Post('scan-invoice')
+  @RequirePermissions(Permission.AI_USE, Permission.STOCK_IMPORT)
+  async scanInvoice(@Body() dto: ScanImageDto, @Req() request: AuthenticatedRequest) {
+    const result = await this.aiService.scanInvoice(String(dto.imageUrl ?? ''), request.user.storeId);
+    return {
+      ...result,
+      imageUrl: dto.imageUrl,
+      lines: result.lines.map((line, index) => ({
+        ...line,
+        index,
+        // Ứng viên tốt nhất đứng đầu; mobile chọn sẵn ứng viên đầu tiên.
+        candidates: this.productsService.match(request.user, { barcode: line.barcode || undefined, name: line.name }),
       })),
     };
   }

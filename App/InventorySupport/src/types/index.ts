@@ -122,6 +122,103 @@ export interface AiSuggestion {
   matchedProducts?: Product[];
 }
 
+/* --------------------------------- Quét (docs/SCAN.md) --------------------------------- */
+
+export type ScanFormat = 'APP_QR' | 'GS1_DIGITAL_LINK' | 'BARCODE' | 'TEXT';
+
+export interface ScanResolveResult {
+  raw: string;
+  code: string;
+  format: ScanFormat;
+  product: Product | null;
+}
+
+export interface ProductLabel {
+  productId: string;
+  name: string;
+  barcode: string;
+  price: number;
+  unit: string;
+  payload: string;
+  qrDataUrl: string;
+}
+
+export interface StockBatchResult {
+  count: number;
+  transactions: StockTransaction[];
+  products: Product[];
+  alerts: AppNotification[];
+}
+
+export interface InvoiceLine {
+  index: number;
+  name: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  barcode: string;
+  confidence: number;
+  candidates: Product[];
+}
+
+export interface InvoiceScanResult {
+  readable: boolean;
+  supplier: string;
+  date: string;
+  imageUrl?: string;
+  lines: InvoiceLine[];
+}
+
+/* --------------------------- Trợ lý hỏi đáp (docs/AI_ASSISTANT.md) --------------------------- */
+
+export interface AssistantProduct {
+  id: string;
+  name: string;
+  barcode: string;
+  category: string;
+  unit: string;
+  quantity: number;
+  minStock: number;
+  price: number;
+  costPrice?: number;
+  imageUrl?: string;
+  status: 'OK' | 'LOW' | 'OUT';
+}
+
+export type AssistantAction =
+  | {
+      id: string;
+      kind: 'STOCK_MOVEMENT';
+      productId: string;
+      productName: string;
+      unit: string;
+      type: StockType;
+      quantity: number;
+      reason?: string;
+      currentQuantity: number;
+    }
+  | {
+      id: string;
+      kind: 'CREATE_PRODUCT';
+      prefill: Partial<ProductInput> & { name: string };
+    };
+
+export interface AssistantReply {
+  sessionId: string;
+  provider: 'claude' | 'offline';
+  reply: string;
+  products: AssistantProduct[];
+  actions: AssistantAction[];
+  toolCalls: { name: string; summary: string }[];
+  turn: number;
+  maxTurns: number;
+}
+
+export interface AiStatus {
+  provider: 'claude' | 'heuristic';
+  assistant: { provider: 'claude' | 'offline'; model?: string; maxTurns: number };
+}
+
 export interface AiResult {
   name: string;
   normalizedName: string;

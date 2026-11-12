@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ProductCard } from '../../components/ProductCard';
 import { TransactionItem } from '../../components/TransactionItem';
@@ -63,6 +63,17 @@ export function DashboardScreen() {
         <Text style={styles.heroTitle}>Xin chào, {user?.name}!</Text>
         <Text style={styles.heroText}>{user ? ROLE_LABELS[user.role] : ''} · Theo dõi cửa hàng hôm nay</Text>
       </View>
+
+      {can('AI_USE') ? (
+        <Pressable style={styles.assistant} onPress={() => navigation.navigate('AiAssistant')} accessibilityRole="button">
+          <Text style={styles.assistantIcon}>💬</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.assistantTitle}>Hỏi trợ lý AI</Text>
+            <Text style={styles.meta}>{'“Hàng nào sắp hết?”, “Xuất 2 chai coca”...'}</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      ) : null}
 
       <ErrorBanner message={error} onRetry={load} />
       {!summary && !error ? <Loading /> : null}
@@ -130,4 +141,8 @@ const styles = StyleSheet.create({
   value: { color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 4 },
   money: { color: colors.text, fontSize: 22, fontWeight: '800' },
   meta: { color: colors.muted, fontSize: 12 },
+  assistant: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.primarySoft, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#cddcff' },
+  assistantIcon: { fontSize: 24 },
+  assistantTitle: { color: colors.primary, fontWeight: '800', fontSize: 15 },
+  chevron: { color: colors.primary, fontSize: 24, fontWeight: '700' },
 });

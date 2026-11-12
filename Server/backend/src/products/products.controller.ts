@@ -35,6 +35,17 @@ export class ProductsController {
     return this.productsService.categories(request.user);
   }
 
+  /** Phân tích chuỗi camera đọc được (mã vạch / QR) và tìm sản phẩm. */
+  @Get('resolve')
+  resolve(@Query('raw') raw: string, @Req() request: AuthenticatedRequest) {
+    return this.productsService.resolve(raw, request.user);
+  }
+
+  @Get(':id/label')
+  label(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.productsService.label(id, request.user);
+  }
+
   @Get('barcode/:barcode')
   findByBarcode(@Param('barcode') barcode: string, @Req() request: AuthenticatedRequest) {
     return this.productsService.findByBarcode(barcode, request.user);

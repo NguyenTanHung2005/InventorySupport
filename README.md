@@ -28,6 +28,8 @@ npm run start:dev
 | `UPLOAD_DIR` | `uploads` | Thư mục lưu ảnh sản phẩm |
 | `ANTHROPIC_API_KEY` | (trống) | Có key thì AI dùng Claude; không có thì dùng bộ luật offline, riêng quét ảnh sẽ báo chưa cấu hình |
 | `AI_MODEL` | `claude-opus-5-5` | Model Claude dùng cho AI |
+| `AI_EFFORT` | `low` | Mức suy luận của trợ lý hỏi đáp (`low`/`medium`/`high`) |
+| `AI_RATE_LIMIT` | `20` | Số câu hỏi trợ lý / 5 phút / người dùng |
 
 Dữ liệu được ghi ra `data/db.json` sau mỗi thao tác, nên khởi động lại không mất.
 Lớp `DatabaseService` đã tách riêng để sau này thay bằng PostgreSQL mà không đổi API.
@@ -53,11 +55,54 @@ npm run lint
 ```powershell
 cd App\InventorySupport
 npm install
-$env:EXPO_PUBLIC_API_URL = "http://localhost:3000"
 npm run start      # hoặc: npm run web
 ```
 
-Trên thiết bị thật, thay `localhost` bằng địa chỉ IP LAN của máy chạy backend.
+App **tự tìm địa chỉ backend**, nên thường không cần cấu hình gì:
+
+| Chạy trên | Địa chỉ được dùng |
+|---|---|
+| Expo Go / development build | IP LAN của máy đang chạy Metro, cổng 3000 |
+| Android emulator (Metro ở localhost) | `http://10.0.2.2:3000` (địa chỉ của máy tính host) |
+| Web | Cùng hostname với trang, cổng 3000 |
+| Ghi đè | `$env:EXPO_PUBLIC_API_URL = "http://<ip>:3000"` (bắt buộc khi dùng `--tunnel`) |
+
+Màn đăng nhập hiển thị địa chỉ máy chủ kèm trạng thái 🟢/🔴. Khi khởi động, backend in ra
+các địa chỉ LAN có thể dùng.
+
+**Không kết nối được từ điện thoại hoặc emulator?**
+
+1. Kiểm tra backend đang chạy: mở `http://localhost:3000/health` trên máy tính.
+2. Điện thoại và máy tính phải dùng cùng một mạng Wi-Fi.
+3. Windows Firewall: nếu Wi-Fi đang ở chế độ *Public* và có rule *Block* cho
+   "Node.js JavaScript Runtime", hãy mở PowerShell **với quyền Administrator** và chạy:
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "Inventory Support API 3000" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow -Profile Private,Public
+   ```
+
+   Hoặc chuyển mạng Wi-Fi sang *Private* (Settings → Network → Wi-Fi → Network profile).
+
+## Quét mã vạch / QR / hình ảnh
+
+Chi tiết nhu cầu, luồng xử lý và giới hạn: [docs/SCAN.md](docs/SCAN.md). Màn **Quét** có 3 chế độ:
+
+- **Tra cứu**: quét một mã vạch, tem QR của cửa hàng hoặc QR chuẩn GS1 để xem giá, tồn và thao tác nhanh. Mã chưa có thì tạo sản phẩm ngay.
+- **Liên tục**: kiểm kê, nhập hàng hoặc xuất nhiều món; mỗi lần quét +1, lưu một lần qua `POST /inventory/batch` (tất cả hoặc không).
+- **Ảnh AI**: nhận diện sản phẩm từ bao bì, hoặc đọc phiếu giao hàng để nhập kho hàng loạt sau khi duyệt.
+
+Sản phẩm không có mã vạch vẫn có **tem QR** (nút "Tem QR" ở chi tiết sản phẩm) để in dán kệ.
+
+## Trợ lý AI
+
+Mô hình, kiến trúc, bộ công cụ, cơ chế an toàn và cách triển khai được mô tả trong
+[docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md). Tóm tắt:
+
+- **Hỏi đáp kho** (`POST /ai/assistant/chat`): Claude tra dữ liệu thật của cửa hàng qua các
+  công cụ chỉ đọc, rồi tạo *thẻ đề xuất* nhập/xuất/tạo sản phẩm. Dữ liệu chỉ thay đổi khi
+  người dùng bấm Xác nhận.
+- **Chuẩn hóa mô tả** và **nhận diện ảnh**: structured output.
+- Không có `ANTHROPIC_API_KEY` thì trợ lý chạy chế độ offline (hiểu các câu hỏi phổ biến).
 
 ## Phân quyền
 
@@ -132,6 +177,11 @@ Mọi danh sách đều nhận `?page=&limit=` (tối đa 100) và trả về
 | GET | `/inventory/low-stock` · `/inventory/transactions` · `/inventory/summary` | Xem sản phẩm |
 | POST | `/uploads/image` (JSON base64, tối đa 5MB, JPEG/PNG/WEBP) | Dùng AI |
 | GET | `/ai/status` · POST `/ai/normalize-product` · `/ai/scan-image` | Dùng AI |
+| POST · DELETE | `/ai/assistant/chat` · `/ai/assistant/sessions/:id` | Dùng AI |
+| GET | `/health` | Công khai |
+| GET | `/products/resolve?raw=` · `/products/:id/label` | Xem sản phẩm |
+| POST | `/inventory/batch` | Theo loại giao dịch |
+| POST | `/ai/scan-invoice` | Dùng AI + Nhập kho |
 | GET | `/notifications` · `/notifications/unread-count` | Quản trị viên, Quản lý |
 | POST | `/notifications/:id/read` · `/notifications/read-all` · `/notifications/push-token` | Quản trị viên, Quản lý |
 | GET · POST · PATCH · DELETE | `/users` · `/users/:id` | Quản lý tài khoản |

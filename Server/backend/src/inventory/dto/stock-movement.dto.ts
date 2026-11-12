@@ -11,6 +11,14 @@ export class StockMovementDto {
   reason?: string;
 }
 
+export class StockBatchDto {
+  type: StockTransactionType = StockTransactionType.IMPORT;
+  /** Áp dụng cho mọi dòng; bắt buộc với ADJUSTMENT. */
+  reason?: string;
+  /** IMPORT/EXPORT: số lượng nhập/xuất. ADJUSTMENT: số đếm thực tế. */
+  items: { productId: string; quantity: number }[] = [];
+}
+
 export interface TransactionQuery {
   page?: string;
   limit?: string;

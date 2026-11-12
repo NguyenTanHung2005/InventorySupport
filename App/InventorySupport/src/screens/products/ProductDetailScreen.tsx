@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ProductImage } from '../../components/ProductImage';
+import { ProductLabelModal } from '../../components/ProductLabelModal';
 import { StockBadge } from '../../components/StockBadge';
 import { TransactionItem } from '../../components/TransactionItem';
 import { Button, Card, ErrorBanner, InfoRow, Loading, SectionTitle } from '../../components/ui';
@@ -25,6 +26,7 @@ export function ProductDetailScreen({ route, navigation }: Props) {
   const [product, setProduct] = useState<Product>();
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [showLabel, setShowLabel] = useState(false);
 
   const history = usePaginated(
     (page, limit) => inventoryService.transactions(token, { productId, page, limit }),
@@ -115,6 +117,9 @@ export function ProductDetailScreen({ route, navigation }: Props) {
         <InfoRow label="Nhà cung cấp" value={product.supplier || '—'} />
         <InfoRow label="Cập nhật" value={formatDateTime(product.updatedAt)} />
       </Card>
+
+      <Button title="Tem QR để in dán kệ" icon="▦" variant="secondary" onPress={() => setShowLabel(true)} />
+      <ProductLabelModal productId={product.id} visible={showLabel} onClose={() => setShowLabel(false)} />
 
       <Card>
         <Text style={styles.label}>Mô tả</Text>

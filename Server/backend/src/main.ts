@@ -1,5 +1,7 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { networkInterfaces } from 'node:os';
 import { AppModule, ObserveInstrument } from './app.module.js';
 import { UPLOAD_URL_PREFIX, uploadRoot } from './uploads/upload-paths.js';
 
@@ -20,6 +22,23 @@ async function bootstrap() {
     dotfiles: 'deny',
     maxAge: '7d',
   });
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+
+  const port = Number(process.env.PORT ?? 3000);
+  // 0.0.0.0 để điện thoại / emulator trong cùng mạng truy cập được.
+  await app.listen(port, '0.0.0.0');
+  logReachableUrls(port);
 }
+
+/** In ra các địa chỉ mà mobile có thể dùng làm EXPO_PUBLIC_API_URL. */
+function logReachableUrls(port: number) {
+  const logger = new Logger('Bootstrap');
+  const lan = Object.values(networkInterfaces())
+    .flat()
+    .filter((item) => item && item.family === 'IPv4' && !item.internal)
+    .map((item) => `http://${item!.address}:${port}`);
+  logger.log(`Máy chủ sẵn sàng: http://localhost:${port}`);
+  logger.log(`Android emulator: http://10.0.2.2:${port}`);
+  for (const url of lan) logger.log(`Điện thoại cùng Wi-Fi: ${url}`);
+}
+
 await bootstrap();

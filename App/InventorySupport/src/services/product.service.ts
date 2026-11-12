@@ -1,4 +1,4 @@
-import { Paginated, Product, ProductInput } from '../types';
+import { Paginated, Product, ProductInput, ProductLabel, ScanResolveResult } from '../types';
 import { request } from './api';
 
 export interface ProductQuery {
@@ -20,6 +20,11 @@ export const productService = {
 
   findByBarcode: (token: string, barcode: string) =>
     request<Product>(`/products/barcode/${encodeURIComponent(barcode)}`, { token }),
+
+  /** Gửi nguyên chuỗi camera đọc được; backend tự nhận dạng mã vạch / tem QR / GS1. */
+  resolve: (token: string, raw: string) => request<ScanResolveResult>('/products/resolve', { token, query: { raw } }),
+
+  label: (token: string, id: string) => request<ProductLabel>(`/products/${encodeURIComponent(id)}/label`, { token }),
 
   create: (token: string, input: ProductInput) =>
     request<Product>('/products', { method: 'POST', token, body: input }),
