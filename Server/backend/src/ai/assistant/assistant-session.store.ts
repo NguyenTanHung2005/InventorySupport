@@ -7,8 +7,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import type { Content } from '@google/genai';
 import type Anthropic from '@anthropic-ai/sdk';
 import { AuthUser } from '../../common/types.js';
+import type { AssistantAction } from './assistant.types.js';
 
 /** docs/AI_ASSISTANT.md mục 4.2 */
 export const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
@@ -20,11 +22,15 @@ export interface AssistantSession {
   id: string;
   userId: string;
   storeId: string;
+  readonly role: AuthUser['role'];
+  readonly model: string;
+  readonly actions: Map<string, { action: AssistantAction; issuedAt: number }>;
+  readonly confirmedActions: Map<string, string>;
   /** Đóng băng khi tạo phiên - không được sửa (giữ thinking block hợp lệ). */
   readonly system: string;
   readonly tools: Anthropic.Beta.BetaTool[];
   /** Lịch sử CHỈ nối thêm. */
-  readonly messages: Anthropic.Beta.BetaMessageParam[];
+  readonly messages: Content[];
   turns: number;
   busy: boolean;
   createdAt: number;
@@ -51,6 +57,10 @@ export class AssistantSessionStore {
       id: `asst-${randomUUID()}`,
       userId: user.id,
       storeId: user.storeId,
+      role: user.role,
+      model: process.env.AI_MODEL ?? 'gemini-3.5-flash-lite',
+      actions: new Map(),
+      confirmedActions: new Map(),
       system,
       tools,
       messages: [],
@@ -67,7 +77,7 @@ export class AssistantSessionStore {
   get(user: AuthUser, id: string): AssistantSession {
     this.evictExpired();
     const session = this.sessions.get(id);
-    if (!session || session.userId !== user.id || session.storeId !== user.storeId) {
+    if (!session || session.userId !== user.id || session.storeId !== user.storeId || session.role !== user.role || session.model !== (process.env.AI_MODEL ?? 'gemini-3.5-flash-lite')) {
       throw new NotFoundException('Phiên trò chuyện đã hết hạn hoặc không tồn tại');
     }
     return session;

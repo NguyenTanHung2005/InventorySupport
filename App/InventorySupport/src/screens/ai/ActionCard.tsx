@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Button } from '../../components/ui';
@@ -19,9 +19,10 @@ import { formatMoney } from '../../utils/format';
 export function ActionCard({ action }: { action: AssistantAction }) {
   const token = useToken();
   const navigation = useNavigation<RootNavigation>();
-  const { actionStatus, setActionStatus } = useAssistant();
+  const { actionStatus, setActionStatus, confirmAction } = useAssistant();
   const { refresh: refreshNotifications } = useNotifications();
   const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
   const status = actionStatus[action.id] ?? 'pending';
@@ -32,6 +33,7 @@ export function ActionCard({ action }: { action: AssistantAction }) {
       <View style={[styles.card, status !== 'pending' && styles.closed]}>
         <Text style={styles.kicker}>ĐỀ XUẤT TẠO SẢN PHẨM</Text>
         <Text style={styles.title}>{prefill.name}</Text>
+        {action.warning ? <Text style={styles.meta}>{action.warning}</Text> : null}
         <Text style={styles.meta}>
           {[prefill.category, prefill.unit, prefill.price ? formatMoney(prefill.price) : undefined, prefill.barcode].filter(Boolean).join(' · ')}
         </Text>
@@ -60,7 +62,8 @@ export function ActionCard({ action }: { action: AssistantAction }) {
       : action.currentQuantity + (action.type === 'EXPORT' ? -action.quantity : action.quantity);
 
   async function confirm() {
-    if (action.kind !== 'STOCK_MOVEMENT') return;
+    if (action.kind !== 'STOCK_MOVEMENT' || inFlight.current || status !== 'pending') return;
+    inFlight.current = true;
     setBusy(true);
     setError('');
     try {
@@ -73,7 +76,13 @@ export function ActionCard({ action }: { action: AssistantAction }) {
       setActionStatus(action.id, 'done');
       setResult(`Đã lưu. ${response.product.name} còn ${response.product.quantity} ${response.product.unit}.${response.alert ? `\n⚠ ${response.alert.message}` : ''}`);
       if (response.alert) void refreshNotifications();
+      try {
+        await confirmAction(action.id, response.transaction.id);
+      } catch {
+        setResult((current) => `${current}\nGiao dịch đã lưu, nhưng chưa đồng bộ với trợ lý. Hãy hỏi lại số tồn; không cần xác nhận nhập/xuất lần nữa.`);
+      }
     } catch (cause) {
+      inFlight.current = false;
       // Ví dụ tồn kho đã thay đổi sau khi AI đề xuất.
       setError((cause as Error).message);
     } finally {

@@ -31,6 +31,7 @@ export type AssistantAction =
   | {
       id: string;
       kind: 'CREATE_PRODUCT';
+      warning?: string;
       prefill: {
         name: string;
         category?: string;
@@ -49,7 +50,7 @@ export interface AssistantToolCall {
 
 export interface AssistantReply {
   sessionId: string;
-  provider: 'claude' | 'offline';
+  provider: 'gemini' | 'offline';
   reply: string;
   products: AssistantProduct[];
   actions: AssistantAction[];

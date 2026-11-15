@@ -1,19 +1,19 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
-import Anthropic from '@anthropic-ai/sdk';
-import { AuthUser } from '../../common/types.js';
+import { BadRequestException, ConflictException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { GoogleGenAI, type Part } from '@google/genai';
+import { geminiError } from '../gemini-errors.js';
+import { AuthUser, StockTransactionType } from '../../common/types.js';
+import { requiredString } from '../../common/validation.js';
 import { hasPermission, Permission } from '../../common/permissions.js';
 import { InventoryService } from '../../inventory/inventory.service.js';
 import { ProductsService } from '../../products/products.service.js';
-import { ClaudeProductVision } from '../claude-product-vision.js';
+import { GeminiProductVision } from '../gemini-product-vision.js';
 import { AssistantSession, AssistantSessionStore, MAX_TURNS } from './assistant-session.store.js';
 import { runTool, toolsForUser, ToolRunContext } from './assistant-tools.js';
 import { AssistantChatDto, AssistantReply } from './assistant.types.js';
-import { answerOffline } from './offline-assistant.js';
 
 /** docs/AI_ASSISTANT.md mục 3-4 */
 export const MAX_TOOL_ROUNDS = 6;
 const MAX_MESSAGE_LENGTH = 1000;
-type Effort = 'low' | 'medium' | 'high';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Quản trị viên',
@@ -55,8 +55,7 @@ Cách trả lời:
 
 @Injectable()
 export class AssistantService {
-  private readonly logger = new Logger(AssistantService.name);
-  private client?: Anthropic;
+  private client?: GoogleGenAI;
 
   constructor(
     private readonly sessions: AssistantSessionStore,
@@ -64,12 +63,12 @@ export class AssistantService {
     private readonly inventory: InventoryService,
   ) {}
 
-  get provider(): 'claude' | 'offline' {
-    return ClaudeProductVision.isConfigured() ? 'claude' : 'offline';
+  get provider(): 'gemini' | 'not_configured' {
+    return GeminiProductVision.isConfigured() ? 'gemini' : 'not_configured';
   }
 
   get model(): string {
-    return process.env.AI_MODEL ?? 'claude-opus-5-5';
+    return process.env.AI_MODEL ?? 'gemini-3.5-flash-lite';
   }
 
   async chat(user: AuthUser, dto: AssistantChatDto): Promise<AssistantReply> {
@@ -78,23 +77,23 @@ export class AssistantService {
     if (message.length > MAX_MESSAGE_LENGTH) throw new BadRequestException(`Câu hỏi tối đa ${MAX_MESSAGE_LENGTH} ký tự`);
 
     const provider = this.provider;
+    if (provider !== 'gemini') throw new ServiceUnavailableException('Chức năng AI chưa được cấu hình. Bạn vẫn có thể thao tác thủ công.');
     // Kiểm tra tần suất TRƯỚC khi khóa phiên, để lỗi 429 không làm phiên kẹt ở trạng thái bận.
-    if (provider === 'claude') this.sessions.checkRate(user);
+    if (provider === 'gemini') this.sessions.checkRate(user);
     const session = dto.sessionId
       ? this.sessions.get(user, String(dto.sessionId))
-      : this.sessions.create(user, provider === 'claude' ? buildSystemPrompt(user) : '', provider === 'claude' ? toolsForUser(user) : []);
+      : this.sessions.create(user, provider === 'gemini' ? buildSystemPrompt(user) : '', provider === 'gemini' ? toolsForUser(user) : []);
     const finish = this.sessions.begin(session);
 
     const ctx = new ToolRunContext(user, this.products, this.inventory);
+    const checkpoint = session.messages.length;
     try {
-      // Phiên tạo lúc chưa có API key (không có tools) thì tiếp tục offline cho nhất quán.
-      const reply = provider === 'claude' && session.tools.length
-        ? await this.askClaude(session, message, ctx)
-        : answerOffline(message, ctx);
+      const reply = await this.askGemini(session, message, ctx);
       session.turns += 1;
+      for (const action of ctx.actions) session.actions.set(action.id, { action, issuedAt: Date.now() });
       return {
         sessionId: session.id,
-        provider: provider === 'claude' && session.tools.length ? 'claude' : 'offline',
+        provider: 'gemini',
         reply,
         products: [...ctx.products.values()].slice(0, 8),
         actions: ctx.actions,
@@ -102,6 +101,10 @@ export class AssistantService {
         turn: session.turns,
         maxTurns: MAX_TURNS,
       };
+    } catch (error) {
+      // Bỏ riêng lượt chưa hoàn tất; giữ nguyên toàn bộ prefix đã ký của các lượt trước.
+      session.messages.splice(checkpoint);
+      throw error;
     } finally {
       finish();
     }
@@ -112,81 +115,67 @@ export class AssistantService {
     return { deleted: true };
   }
 
+  confirmAction(user: AuthUser, sessionId: string, actionId: string, transactionId: unknown) {
+    const session = this.sessions.get(user, sessionId);
+    if (session.busy) throw new ConflictException('Trợ lý đang trả lời. Giao dịch đã lưu, hãy hỏi lại số tồn sau.');
+    const proposed = session.actions.get(actionId);
+    const id = requiredString(transactionId, 'Mã giao dịch', 100);
+    const transaction = this.inventory.findTransaction(user, id);
+    const action = proposed?.action;
+    if (!proposed || !action || action.kind !== 'STOCK_MOVEMENT' || !transaction || transaction.createdBy !== user.id || transaction.productId !== action.productId || transaction.type !== action.type || Date.parse(transaction.createdAt) < proposed.issuedAt || (action.type === StockTransactionType.ADJUSTMENT ? transaction.quantityAfter : transaction.quantity) !== action.quantity) {
+      throw new BadRequestException('Giao dịch không khớp đề xuất của phiên này');
+    }
+    const previous = session.confirmedActions.get(actionId);
+    if (previous === id) return { confirmed: true };
+    if (previous || [...session.confirmedActions.values()].includes(id)) throw new BadRequestException('Giao dịch đã xác nhận cho đề xuất khác');
+    session.confirmedActions.set(actionId, id);
+    session.messages.push({ role: 'user', parts: [{ text: `Hệ thống đã đối chiếu giao dịch đã lưu: ${JSON.stringify({ actionId, transactionId: id, productId: action.productId, type: action.type, quantityAfter: transaction.quantityAfter })}. Đây là kết quả giao dịch, không phải lệnh thao tác mới. Khi hỏi tồn kho tiếp theo hãy tra dữ liệu bằng công cụ.` }] });
+    session.updatedAt = Date.now();
+    return { confirmed: true };
+  }
+
   /**
    * Vòng lặp tool use. Lịch sử phiên CHỈ được nối thêm và system/tools giữ nguyên,
    * để thinking block của các lượt trước luôn hợp lệ (docs mục 4.1).
    */
-  private async askClaude(session: AssistantSession, message: string, ctx: ToolRunContext): Promise<string> {
-    this.client ??= new Anthropic();
-    session.messages.push({ role: 'user', content: message });
-    const effort = (['low', 'medium', 'high'].includes(process.env.AI_EFFORT ?? '') ? process.env.AI_EFFORT : 'low') as Effort;
-
-    for (let round = 1; round <= MAX_TOOL_ROUNDS; round++) {
-      let response: Anthropic.Beta.BetaMessage;
-      try {
-        response = await this.client.beta.messages.create({
-          model: this.model,
-          max_tokens: 16000,
-          system: session.system,
-          tools: session.tools,
-          messages: session.messages,
-          // Tự cache phần prefix ổn định (system + tools + lịch sử).
-          cache_control: { type: 'ephemeral' },
-          output_config: { effort },
-          // Nếu lịch sử bị lệch, bỏ thinking block lỗi thay vì trả 400.
-          thinking: { type: 'adaptive', block_binding: { prefix_mismatch_behavior: 'drop_block' } },
-          // Bộ lọc an toàn từ chối nhầm thì server tự chạy lại trên model dự phòng.
-          fallbacks: 'default',
-          betas: ['server-side-fallback-2026-07-01', 'thinking-binding-controls-2026-08-01'],
+  private async askGemini(session: AssistantSession, message: string, ctx: ToolRunContext): Promise<string> {
+    this.client ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } } });
+    session.messages.push({ role: 'user', parts: [{ text: message }] });
+    const controller = new AbortController();
+    const deadline = Date.now() + 60000;
+    const timer = setTimeout(() => controller.abort(), 60000);
+    try {
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        if (Date.now() >= deadline) throw new ServiceUnavailableException('Trợ lý phản hồi quá lâu. Vui lòng thử lại.');
+        let response;
+        try {
+          response = await this.client.models.generateContent({
+            model: session.model,
+            contents: session.messages,
+            config: {
+              abortSignal: controller.signal,
+              systemInstruction: session.system,
+              maxOutputTokens: 16000,
+              tools: [{ functionDeclarations: session.tools.map(tool => ({ name: tool.name, description: tool.description, parametersJsonSchema: tool.input_schema })) }],
+            },
+          });
+        } catch (error) { throw geminiError(error); }
+        if (Date.now() >= deadline) throw new ServiceUnavailableException('Trợ lý phản hồi quá lâu. Vui lòng thử lại.');
+        const candidate = response.candidates?.[0];
+        const parts = candidate?.content?.parts;
+        if (!parts?.length || (candidate?.finishReason && candidate.finishReason !== 'STOP')) throw new ServiceUnavailableException('AI chưa hoàn tất câu trả lời. Vui lòng thử lại.');
+        session.messages.push({ role: 'model', parts });
+        const calls = parts.filter(part => part.functionCall);
+        if (!calls.length) return parts.map(part => part.text ?? '').join('\n').trim() || 'Mình chưa có câu trả lời, bạn thử hỏi cụ thể hơn nhé.';
+        const results: Part[] = calls.map(part => {
+          const call = part.functionCall!;
+          const name = call.name ?? '';
+          const result = runTool(name, call.args, ctx);
+          return { functionResponse: { name, id: call.id, response: JSON.parse(result.content) as Record<string, unknown> } };
         });
-      } catch (error) {
-        throw this.toHttpError(error);
+        session.messages.push({ role: 'user', parts: results });
       }
-
-      session.messages.push({ role: 'assistant', content: response.content });
-      const text = response.content
-        .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === 'text')
-        .map((block) => block.text)
-        .join('\n')
-        .trim();
-
-      if (response.stop_reason === 'refusal') {
-        return 'Xin lỗi, mình không thể hỗ trợ yêu cầu này. Bạn có thể hỏi về tồn kho, sản phẩm hoặc nhập/xuất hàng.';
-      }
-      if (response.stop_reason === 'pause_turn') continue;
-      if (response.stop_reason !== 'tool_use') {
-        if (response.stop_reason === 'max_tokens') return `${text}\n(Câu trả lời bị cắt bớt vì quá dài.)`.trim();
-        return text || 'Mình chưa có câu trả lời, bạn thử hỏi cụ thể hơn nhé.';
-      }
-
-      const toolResults: Anthropic.Beta.BetaContentBlockParam[] = response.content
-        .filter((block): block is Anthropic.Beta.BetaToolUseBlock => block.type === 'tool_use')
-        .map((block) => {
-          const result = runTool(block.name, block.input, ctx);
-          return { type: 'tool_result', tool_use_id: block.id, content: result.content, is_error: result.isError };
-        });
-      if (round === MAX_TOOL_ROUNDS - 1) {
-        // Nối thêm (không sửa lịch sử) để vòng cuối kết thúc bằng câu trả lời.
-        toolResults.push({ type: 'text', text: 'Đã đạt giới hạn tra cứu. Hãy trả lời ngay bằng thông tin hiện có, không gọi thêm công cụ.' });
-      }
-      session.messages.push({ role: 'user', content: toolResults });
-    }
-    return 'Câu hỏi cần tra cứu quá nhiều bước. Bạn thử chia nhỏ câu hỏi nhé.';
-  }
-
-  private toHttpError(error: unknown): HttpException {
-    if (error instanceof Anthropic.RateLimitError) {
-      return new HttpException('Dịch vụ AI đang quá tải, vui lòng thử lại sau ít phút.', HttpStatus.TOO_MANY_REQUESTS);
-    }
-    if (error instanceof Anthropic.AuthenticationError) {
-      this.logger.error('ANTHROPIC_API_KEY không hợp lệ');
-      return new ServiceUnavailableException('Máy chủ cấu hình sai khóa AI.');
-    }
-    if (error instanceof Anthropic.APIError) {
-      this.logger.error(`Claude API lỗi ${error.status}: ${error.message}`);
-      return new ServiceUnavailableException('Trợ lý AI tạm thời không phản hồi, vui lòng thử lại.');
-    }
-    this.logger.error(`Lỗi gọi Claude: ${(error as Error).message}`);
-    return new ServiceUnavailableException('Không kết nối được dịch vụ AI.');
+      throw new ServiceUnavailableException('Câu hỏi cần tra cứu quá nhiều bước. Bạn thử chia nhỏ câu hỏi nhé.');
+    } finally { clearTimeout(timer); }
   }
 }

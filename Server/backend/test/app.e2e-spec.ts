@@ -4,6 +4,9 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
+import { GeminiProductVision } from '../src/ai/gemini-product-vision.js';
+import { AssistantService } from '../src/ai/assistant/assistant.service.js';
+import { runTool, type ToolRunContext } from '../src/ai/assistant/assistant-tools.js';
 
 // 1x1 PNG
 const PNG_BASE64 =
@@ -194,16 +197,45 @@ describe('Inventory Support API (e2e)', () => {
     });
   });
 
-  describe('AI assistant (offline mode)', () => {
+  describe('AI assistant (mock Gemini)', () => {
     beforeEach(() => {
-      vi.stubEnv('ANTHROPIC_API_KEY', '');
-      vi.stubEnv('ANTHROPIC_AUTH_TOKEN', '');
+      vi.stubEnv('GEMINI_API_KEY', 'test-key');
+      vi.spyOn(GeminiProductVision.prototype, 'normalizeText').mockResolvedValue({ correctedText: 'coca', hasMoreProducts: false, suggestions: [{ name: 'coca', normalizedName: 'Coca-Cola 390ml', category: 'Nước giải khát', unit: 'chai', description: 'Nước giải khát Coca-Cola.', barcode: '', confidence: 0.9 }] });
+      vi.spyOn(AssistantService.prototype as unknown as { askGemini: (session: unknown, message: string, ctx: ToolRunContext) => Promise<string> }, 'askGemini').mockImplementation(async (_session, message, ctx) => {
+        if (message.includes('sắp hết')) { runTool('list_low_stock', {}, ctx); return 'Mì Hảo Hảo sắp hết.'; }
+        if (message.includes('tổng quan')) { runTool('get_inventory_summary', {}, ctx); return 'Tổng quan kho.'; }
+        const result = runTool('propose_stock_movement', { product_id: 'product-1', type: message.includes('nhập') ? 'IMPORT' : 'EXPORT', quantity: message.includes('10') ? 10 : 2 }, ctx);
+        return result.isError || JSON.parse(result.content).error ? 'Bạn không có quyền.' : 'Hãy xác nhận.';
+      });
     });
-    afterEach(() => vi.unstubAllEnvs());
+    afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+
+    it('matches text suggestions without exposing cost price to staff or writing data', async () => {
+      const response = await api().post('/ai/normalize-product').set(as('staff')).send({ text: 'coca' }).expect(201);
+      expect(response.body.suggestions[0].matchedProducts[0]).toMatchObject({ id: 'product-1', quantity: 24 });
+      expect(response.body.suggestions[0].matchedProducts[0]).not.toHaveProperty('costPrice');
+      await api().post('/ai/normalize-product').set(as('staff')).send({ text: 123 }).expect(400);
+      const p = await api().get('/products/product-1').set(as('staff')).expect(200);
+      expect(p.body.quantity).toBe(24);
+    });
+
+    it('confirms an action only with matching persisted transaction evidence', async () => {
+      const reply = await api().post('/ai/assistant/chat').set(as('staff')).send({ message: 'xuất 2 chai coca' }).expect(201);
+      const action = reply.body.actions[0];
+      const path = `/ai/assistant/sessions/${reply.body.sessionId}/actions/${action.id}/confirm`;
+      await api().post(path).set(as('staff')).send({ transactionId: 'missing' }).expect(400);
+      const moved = await api().post('/inventory/movement').set(as('staff')).send({ productId: action.productId, type: action.type, quantity: action.quantity });
+      expect(moved.status).toBe(201);
+      await api().post(path).set(as('staff')).send({ transactionId: moved.body.transaction.id }).expect(201);
+      await api().post(path).set(as('staff')).send({ transactionId: moved.body.transaction.id }).expect(201);
+      await api().post(path).set(as('manager')).send({ transactionId: moved.body.transaction.id }).expect(404);
+      const p = await api().get('/products/product-1').set(as('staff')).expect(200);
+      expect(p.body.quantity).toBe(22);
+    });
 
     it('answers low-stock questions and keeps a session', async () => {
       const first = await api().post('/ai/assistant/chat').set(as('manager')).send({ message: 'Hàng nào sắp hết?' }).expect(201);
-      expect(first.body).toMatchObject({ provider: 'offline', turn: 1 });
+      expect(first.body).toMatchObject({ provider: 'gemini', turn: 1 });
       expect(first.body.reply).toContain('Mì Hảo Hảo');
       expect(first.body.products.length).toBeGreaterThan(0);
 

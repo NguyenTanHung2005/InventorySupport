@@ -26,7 +26,7 @@ export function AssistantChat() {
   const { can } = useAuth();
   const { messages, sending, turn, maxTurns, send, reset } = useAssistant();
   const [text, setText] = useState('');
-  const [mode, setMode] = useState<{ provider: 'claude' | 'offline'; model?: string }>();
+  const [mode, setMode] = useState<{ provider: 'gemini' | 'not_configured'; model?: string }>();
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   useEffect(() => {
@@ -38,6 +38,7 @@ export function AssistantChat() {
 
   const suggestions = useMemo(() => SUGGESTIONS.filter((item) => !item.permission || can(item.permission)), [can]);
   const limitReached = turn >= maxTurns;
+  const activeProvider = [...messages].reverse().find((message) => message.provider)?.provider ?? mode?.provider;
 
   function submit(value = text) {
     if (!value.trim() || sending || limitReached) return;
@@ -54,7 +55,7 @@ export function AssistantChat() {
     <View style={styles.page}>
       <View style={styles.toolbar}>
         <Text style={styles.mode}>
-          {mode ? (mode.provider === 'claude' ? '🟢 Claude AI' : '🟡 Chế độ offline (chưa cấu hình AI)') : ' '}
+          {activeProvider ? (activeProvider === 'gemini' ? '🟢 Gemini AI' : '🟡 AI chưa được cấu hình') : ' '}
         </Text>
         {messages.length ? (
           <Text style={styles.link} onPress={startOver}>Trò chuyện mới</Text>

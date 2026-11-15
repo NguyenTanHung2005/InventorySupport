@@ -119,8 +119,10 @@ export interface AiSuggestion {
   source: 'heuristic' | 'provider';
   matchedTerms: string[];
   barcode?: string;
-  matchedProducts?: Product[];
+  matchedProducts?: ProductCandidate[];
 }
+
+export type ProductCandidate = Omit<Product, 'costPrice'> & { costPrice?: number };
 
 /* --------------------------------- Quét (docs/SCAN.md) --------------------------------- */
 
@@ -158,7 +160,7 @@ export interface InvoiceLine {
   unitPrice: number;
   barcode: string;
   confidence: number;
-  candidates: Product[];
+  candidates: ProductCandidate[];
 }
 
 export interface InvoiceScanResult {
@@ -200,12 +202,13 @@ export type AssistantAction =
   | {
       id: string;
       kind: 'CREATE_PRODUCT';
+      warning?: string;
       prefill: Partial<ProductInput> & { name: string };
     };
 
 export interface AssistantReply {
   sessionId: string;
-  provider: 'claude' | 'offline';
+  provider: 'gemini' | 'not_configured';
   reply: string;
   products: AssistantProduct[];
   actions: AssistantAction[];
@@ -215,11 +218,12 @@ export interface AssistantReply {
 }
 
 export interface AiStatus {
-  provider: 'claude' | 'heuristic';
-  assistant: { provider: 'claude' | 'offline'; model?: string; maxTurns: number };
+  provider: 'gemini' | 'not_configured';
+  assistant: { provider: 'gemini' | 'not_configured'; model?: string; maxTurns: number };
 }
 
 export interface AiResult {
+  fallbackReason?: 'not_configured' | 'provider_unavailable';
   name: string;
   normalizedName: string;
   category: string;

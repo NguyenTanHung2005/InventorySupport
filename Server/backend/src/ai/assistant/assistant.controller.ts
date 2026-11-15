@@ -22,4 +22,9 @@ export class AssistantController {
   reset(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
     return this.assistant.reset(request.user, id);
   }
+
+  @Post('sessions/:id/actions/:actionId/confirm')
+  confirmAction(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Param('actionId') actionId: string, @Body() dto: { transactionId?: unknown }) {
+    return this.assistant.confirmAction(request.user, id, actionId, dto?.transactionId);
+  }
 }

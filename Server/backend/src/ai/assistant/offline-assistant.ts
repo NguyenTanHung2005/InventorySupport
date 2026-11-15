@@ -53,6 +53,7 @@ const TYPE_LABEL: Record<string, string> = { IMPORT: 'Nhập', EXPORT: 'Xuất',
 /** Trả về câu trả lời; sản phẩm/thẻ đề xuất được ghi vào `ctx`. */
 export function answerOffline(message: string, ctx: ToolRunContext): string {
   const { intent, key } = detectIntent(message);
+  if (/\b(do|nay|vua roi)\b/.test(key) && /\b(nhap|xuat)\b/.test(key)) return 'Chế độ offline chưa hiểu ngữ cảnh câu trước. Hãy nói rõ tên sản phẩm và số lượng, ví dụ: xuất 2 chai coca.';
   const call = (name: string, input: Record<string, unknown> = {}) => {
     const result = runTool(name, input, ctx);
     return JSON.parse(result.content) as Record<string, unknown> & { error?: string };

@@ -16,6 +16,38 @@ Trợ lý AI giúp nhân viên cửa hàng nhỏ làm nhanh ba việc mà không
 | **Nhận diện ảnh** | Chụp bao bì sản phẩm | Gợi ý sản phẩm + mã vạch đọc được + đối chiếu hàng có sẵn |
 | **Hỏi đáp kho** (mới) | Hỏi "Hàng nào sắp hết?", "Coca còn bao nhiêu?", "Xuất 3 chai coca" | Câu trả lời dựa trên dữ liệu thật của cửa hàng + **thẻ đề xuất** thao tác để người dùng bấm xác nhận |
 
+### Chuẩn hóa từ tên hàng
+
+Người dùng có thể chỉ nhập tên. Claude sửa chính tả, phân biệt và tách từng sản phẩm,
+viết title rõ nghĩa trong `suggestions[].normalizedName`, viết mô tả riêng trong
+`suggestions[].description`, gợi ý danh mục và đơn vị. `suggestions[].name` là cụm tên
+gốc của riêng món đó; `correctedText` là văn bản đã sửa của cả đầu vào.
+
+Tối đa 5 món mỗi lần. `hasMoreProducts` trong output provider giúp phát hiện vượt giới hạn;
+backend yêu cầu chia nhỏ, không âm thầm bỏ món thứ sáu. Hai món cùng danh mục vẫn là
+hai sản phẩm. Dấu phẩy thập phân như 1,5 lít không phải ranh giới sản phẩm.
+
+App hiện từng thẻ có thể sửa title, mô tả, danh mục, đơn vị; đối chiếu sản phẩm có sẵn
+trong đúng cửa hàng. Title ánh xạ vào tên sản phẩm khi người dùng bấm áp dụng. Không
+tự áp dụng món đầu, không tự đổi đơn vị khi sửa hàng đã có; đơn vị chưa rõ phải xác nhận.
+Title có thêm loại hàng/đơn vị vẫn được đối chiếu với tên ngắn trong kho. Tên gần giống
+chỉ là ứng viên, không chặn vĩnh viễn biến thể mới: thẻ tạo mới có cảnh báo đối chiếu và
+người dùng vẫn phải mở form để duyệt. Barcode đã có (kể cả dạng số tương đương) bị từ chối.
+Chuẩn hóa chỉ chuẩn bị thông tin hàng: số lượng/giá nhập do người dùng bổ sung qua
+nghiệp vụ nhập kho. AI không suy ra giá, barcode, thương hiệu hay quy cách còn thiếu.
+
+Output được kiểm tra độ dài theo giới hạn lưu sản phẩm, confidence hữu hạn trong 0..1,
+mô tả không rỗng hoặc trùng nguyên title, và stop reason phải hoàn tất. JSON đúng schema
+vẫn có thể sai về nội dung, nên luôn cần người dùng duyệt. Confidence là model tự đánh giá.
+
+Nếu thiếu key hoặc provider lỗi, `source=heuristic` kèm `fallbackReason=not_configured`
+hoặc `provider_unavailable`. UI cảnh báo offline chỉ hỗ trợ sửa/tách cơ bản; không hiển thị
+confidence 80% giả hoặc coi mô tả mẫu là khả năng viết của AI. `GET /ai/status` chỉ là trạng
+thái cấu hình. SDK chờ 30 giây/lần, không retry, chat có deadline tổng 60 giây; app chờ
+chuẩn hóa/ảnh/phiếu 40 giây và chat 70 giây.
+
+Bộ ca đánh giá và các giới hạn kiểm chứng: [AI_NORMALIZATION_EVAL.md](AI_NORMALIZATION_EVAL.md).
+
 **Ngoài phạm vi** (đúng ràng buộc của đề tài, *không mở rộng thành ERP*): kế toán, công nợ,
 đơn đặt hàng nhà cung cấp, dự báo nhu cầu. Trợ lý **không tự ghi dữ liệu**.
 
@@ -76,8 +108,9 @@ sắp xếp lại, API sẽ từ chối block đó. Vì vậy:
 
 - Backend giữ **toàn bộ** lịch sử (gồm thinking, `tool_use`, `tool_result`) trong
   `AssistantSessionStore`, mobile chỉ gửi `sessionId` + câu hỏi mới.
-- Lịch sử **chỉ nối thêm** (append-only): không bao giờ sửa/xóa message cũ.
+- Lịch sử các lượt **đã hoàn tất chỉ nối thêm**. Khi lỗi giữa lượt, backend bỏ riêng phần chưa hoàn tất về mốc trước lượt đó; không sửa prefix hoặc thinking block của các lượt thành công.
 - `system` prompt và danh sách `tools` **được đóng băng khi tạo phiên** (theo vai trò lúc đó).
+- Model cũng được ghim vào phiên. Nếu đổi model hoặc vai trò, phiên cũ trả 404 để app bắt đầu phiên mới, tránh tái dùng quyền/prompt cũ.
 - Gửi `thinking.block_binding.prefix_mismatch_behavior: "drop_block"` (beta
   `thinking-binding-controls-2026-08-01`): nếu có lỗi lệch lịch sử, API bỏ block lỗi thay vì
   trả 400, hội thoại vẫn tiếp tục.
@@ -123,6 +156,17 @@ Giá nhập (`cost_price`) chỉ trả về cho người có quyền xem báo c�
 (giảm thiểu lộ dữ liệu kinh doanh cho nhân viên).
 
 ### Thẻ đề xuất (action card)
+
+Sau khi API kho lưu thành công, app gọi
+`POST /ai/assistant/sessions/:id/actions/:actionId/confirm` với `transactionId`.
+Backend đối chiếu giao dịch thật: cùng cửa hàng, người thao tác, sản phẩm, loại, số lượng
+và thời điểm; chỉ nhận action do chính phiên phát hành. Endpoint chỉ nối sự kiện đã xác
+minh vào ngữ cảnh, không gọi model, không ghi kho và không tăng số lượt chat. Gửi lại cùng
+bằng chứng không ghi trùng. Nếu đồng bộ thất bại, UI vẫn báo giao dịch đã lưu và hướng dẫn
+hỏi lại số tồn; không tự retry nhập/xuất. Khi trả lời tồn, model vẫn phải gọi công cụ đọc kho.
+
+App bỏ response chat cũ sau khi reset và khóa gửi bằng ref để tránh bấm nhanh gửi trùng.
+Offline không nhớ ngữ cảnh câu trước; câu kiểu “xuất thêm 2 cái đó” được yêu cầu nói rõ tên.
 
 ```json
 { "id": "act-...", "kind": "STOCK_MOVEMENT", "productId": "product-1", "productName": "Coca-Cola 390ml",
@@ -248,3 +292,7 @@ Chi phí ước tính: một câu hỏi thường gồm 1-3 lần gọi model, m
 - Chưa stream câu trả lời từng chữ (cần SSE trên React Native).
 - Offline chỉ hiểu các mẫu câu phổ biến.
 - Có thể thêm: gợi ý số lượng nhập dựa trên tốc độ bán, trả lời bằng giọng nói.
+# Lưu ý về tài liệu
+
+Tài liệu bên dưới mô tả thiết kế Claude trước khi chuyển đổi. Xem [báo cáo Gemini](AI_GEMINI_MIGRATION_REPORT.md) để biết hướng dẫn hiện tại; các chi tiết Claude/offline bên dưới không mô tả luồng đang chạy.
+

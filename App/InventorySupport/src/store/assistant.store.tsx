@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type PropsWithChildren } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { ApiError } from '../services/api';
 import { aiService } from '../services/ai.service';
 import { AssistantAction, AssistantProduct } from '../types';
@@ -13,7 +13,7 @@ export interface ChatMessage {
   products?: AssistantProduct[];
   actions?: AssistantAction[];
   toolCalls?: { name: string; summary: string }[];
-  provider?: 'claude' | 'offline';
+  provider?: 'gemini' | 'not_configured';
   error?: boolean;
 }
 
@@ -26,6 +26,7 @@ interface AssistantStore {
   send: (text: string) => Promise<void>;
   reset: () => Promise<void>;
   setActionStatus: (id: string, status: ActionStatus) => void;
+  confirmAction: (actionId: string, transactionId: string) => Promise<void>;
 }
 
 const AssistantContext = createContext<AssistantStore | undefined>(undefined);
@@ -45,11 +46,16 @@ export function AssistantProvider({ children }: PropsWithChildren) {
   const [maxTurns, setMaxTurns] = useState(30);
   const [actionStatus, setActionStatusMap] = useState<Record<string, ActionStatus>>({});
   const sessionId = useRef<string | undefined>(undefined);
+  const generation = useRef(0);
+  const inFlight = useRef(false);
+  useEffect(() => () => { generation.current++; }, []);
 
   const send = useCallback(
     async (text: string) => {
       const message = text.trim();
-      if (!token || !message || sending) return;
+      if (!token || !message || inFlight.current) return;
+      inFlight.current = true;
+      const id = generation.current;
       setSending(true);
       setMessages((current) => [...current, { id: nextId(), role: 'user', text: message }]);
       try {
@@ -57,12 +63,14 @@ export function AssistantProvider({ children }: PropsWithChildren) {
         try {
           reply = await aiService.chat(token, message, sessionId.current);
         } catch (error) {
+          if (id !== generation.current) return;
           // Phiên hết hạn hoặc server khởi động lại: tự bắt đầu phiên mới và hỏi lại.
           if (!(error instanceof ApiError && error.status === 404 && sessionId.current)) throw error;
           sessionId.current = undefined;
           setMessages((current) => [...current, { id: nextId(), role: 'notice', text: 'Phiên cũ đã hết hạn, đã bắt đầu cuộc trò chuyện mới.' }]);
           reply = await aiService.chat(token, message);
         }
+        if (id !== generation.current) return;
         sessionId.current = reply.sessionId;
         setTurn(reply.turn);
         setMaxTurns(reply.maxTurns);
@@ -79,16 +87,22 @@ export function AssistantProvider({ children }: PropsWithChildren) {
           },
         ]);
       } catch (error) {
-        setMessages((current) => [...current, { id: nextId(), role: 'assistant', text: (error as Error).message, error: true }]);
+        if (id === generation.current) setMessages((current) => [...current, { id: nextId(), role: 'assistant', text: (error as Error).message, error: true }]);
       } finally {
-        setSending(false);
+        if (id === generation.current) {
+          inFlight.current = false;
+          setSending(false);
+        }
       }
     },
-    [token, sending],
+    [token],
   );
 
   const reset = useCallback(async () => {
     const id = sessionId.current;
+    generation.current++;
+    inFlight.current = false;
+    setSending(false);
     sessionId.current = undefined;
     setMessages([]);
     setTurn(0);
@@ -100,9 +114,15 @@ export function AssistantProvider({ children }: PropsWithChildren) {
     setActionStatusMap((current) => ({ ...current, [id]: status }));
   }, []);
 
+  const confirmAction = useCallback(async (actionId: string, transactionId: string) => {
+    const session = sessionId.current;
+    if (!token || !session) throw new Error('Phiên trò chuyện không còn tồn tại');
+    await aiService.confirmAction(token, session, actionId, transactionId);
+  }, [token]);
+
   const value = useMemo(
-    () => ({ messages, sending, turn, maxTurns, actionStatus, send, reset, setActionStatus }),
-    [messages, sending, turn, maxTurns, actionStatus, send, reset, setActionStatus],
+    () => ({ messages, sending, turn, maxTurns, actionStatus, send, reset, setActionStatus, confirmAction }),
+    [messages, sending, turn, maxTurns, actionStatus, send, reset, setActionStatus, confirmAction],
   );
   return <AssistantContext.Provider value={value}>{children}</AssistantContext.Provider>;
 }

@@ -18,7 +18,7 @@ export function AuthNavigator() {
     setError('');
     try {
       const result = await authService.login(email, password);
-      signIn(result.accessToken, result.user);
+      await signIn(result.accessToken, result.user);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {

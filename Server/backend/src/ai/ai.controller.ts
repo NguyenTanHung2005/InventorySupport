@@ -23,18 +23,25 @@ export class AiController {
   @Get('status')
   status() {
     return {
-      provider: this.aiService.providerEnabled ? 'claude' : 'heuristic',
+      provider: this.aiService.providerEnabled ? 'gemini' : 'not_configured',
       assistant: {
         provider: this.assistant.provider,
-        model: this.assistant.provider === 'claude' ? this.assistant.model : undefined,
+        model: this.assistant.provider === 'gemini' ? this.assistant.model : undefined,
         maxTurns: MAX_TURNS,
       },
     };
   }
 
   @Post('normalize-product')
-  normalizeProduct(@Body() dto: NormalizeProductDto, @Req() request: AuthenticatedRequest) {
-    return this.aiService.normalize(dto, this.productsService.categories(request.user));
+  async normalizeProduct(@Body() dto: NormalizeProductDto, @Req() request: AuthenticatedRequest) {
+    const result = await this.aiService.normalize(dto, this.productsService.categories(request.user));
+    return {
+      ...result,
+      suggestions: result.suggestions.map((suggestion) => ({
+        ...suggestion,
+        matchedProducts: this.productsService.matchPublic(request.user, { barcode: suggestion.barcode, name: suggestion.normalizedName }),
+      })),
+    };
   }
 
   /** Nhận diện ảnh + đối chiếu với sản phẩm đang có trong cửa hàng. */
@@ -51,7 +58,7 @@ export class AiController {
       imageUrl: dto.imageUrl,
       suggestions: result.suggestions.map((suggestion) => ({
         ...suggestion,
-        matchedProducts: this.productsService.match(request.user, {
+        matchedProducts: this.productsService.matchPublic(request.user, {
           barcode: suggestion.barcode,
           name: suggestion.normalizedName,
         }),
@@ -74,7 +81,7 @@ export class AiController {
         ...line,
         index,
         // Ứng viên tốt nhất đứng đầu; mobile chọn sẵn ứng viên đầu tiên.
-        candidates: this.productsService.match(request.user, { barcode: line.barcode || undefined, name: line.name }),
+        candidates: this.productsService.matchPublic(request.user, { barcode: line.barcode || undefined, name: line.name }),
       })),
     };
   }

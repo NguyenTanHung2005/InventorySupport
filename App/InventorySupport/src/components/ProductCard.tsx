@@ -4,7 +4,7 @@ import { Product } from '../types';
 import { formatMoney } from '../utils/format';
 import { ProductImage } from './ProductImage';
 
-export function ProductCard({ product, onPress, selected }: { product: Product; onPress?: () => void; selected?: boolean }) {
+export function ProductCard({ product, onPress, selected }: { product: Pick<Product, 'id' | 'name' | 'barcode' | 'category' | 'unit' | 'quantity' | 'minStock' | 'price' | 'imageUrl'>; onPress?: () => void; selected?: boolean }) {
   const low = product.quantity <= product.minStock;
   return (
     <Pressable

@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ProductCard } from '../../components/ProductCard';
+import { AiResultNotice, AiSuggestionCard } from '../../components/AiSuggestionCard';
 import { Badge, Button, Card, Chip, ErrorBanner, Segmented, SuccessBanner, SwitchRow } from '../../components/ui';
 import { colors } from '../../constants/theme';
 import type { RootNavigation } from '../../navigation/types';
 import { aiService } from '../../services/ai.service';
 import { inventoryService } from '../../services/inventory.service';
 import { productService } from '../../services/product.service';
-import { pickImage, uploadService } from '../../services/upload.service';
+import { pickImage, uploadService, type PickedImage } from '../../services/upload.service';
 import { useAuth, useToken } from '../../store/auth.store';
 import { useNotifications } from '../../store/notification.store';
-import { AiResult, AiSuggestion, InvoiceLine, InvoiceScanResult, Product } from '../../types';
+import { AiResult, AiSuggestion, InvoiceLine, InvoiceScanResult, Product, ProductCandidate } from '../../types';
 import { confirmAction } from '../../utils/dialog';
 import { formatMoney, parseNumberInput } from '../../utils/format';
 
 type Task = 'product' | 'invoice';
-type Stage = 'idle' | 'uploading' | 'analyzing';
+type Stage = 'idle' | 'selecting' | 'uploading' | 'analyzing';
 
 /** Quét bằng ảnh (docs/SCAN.md mục 3): nhận diện sản phẩm hoặc đọc phiếu nhập. */
 export function ImageScanner() {
@@ -24,8 +24,10 @@ export function ImageScanner() {
   const { can } = useAuth();
   const navigation = useNavigation<RootNavigation>();
   const [task, setTask] = useState<Task>('product');
-  const [provider, setProvider] = useState<'claude' | 'heuristic'>();
+  const [provider, setProvider] = useState<'gemini' | 'not_configured'>();
   const [preview, setPreview] = useState<string>();
+  const [pickedImage, setPickedImage] = useState<PickedImage>();
+  const [uploadedUrl, setUploadedUrl] = useState<string>();
   const [stage, setStage] = useState<Stage>('idle');
   const [error, setError] = useState('');
   const [productResult, setProductResult] = useState<AiResult>();
@@ -36,15 +38,20 @@ export function ImageScanner() {
   }, [token]);
 
   async function scan(source: 'camera' | 'library') {
+    if (stage !== 'idle') return;
     setError('');
-    setProductResult(undefined);
-    setInvoice(undefined);
+    setStage('selecting');
     try {
       const image = await pickImage(source);
       if (!image) return;
+      setProductResult(undefined);
+      setInvoice(undefined);
       setPreview(image.uri);
+      setPickedImage(image);
+      setUploadedUrl(undefined);
       setStage('uploading');
       const { url } = await uploadService.uploadImage(token, image);
+      setUploadedUrl(url);
       setStage('analyzing');
       if (task === 'product') setProductResult(await aiService.scanImage(token, url));
       else setInvoice(await aiService.scanInvoice(token, url));
@@ -55,6 +62,24 @@ export function ImageScanner() {
     }
   }
 
+  async function retry() {
+    if (!pickedImage || stage !== 'idle') return;
+    setError('');
+    try {
+      let url = uploadedUrl;
+      if (!url) {
+        setStage('uploading');
+        url = (await uploadService.uploadImage(token, pickedImage)).url;
+        setUploadedUrl(url);
+      }
+      setStage('analyzing');
+      if (task === 'product') setProductResult(await aiService.scanImage(token, url));
+      else setInvoice(await aiService.scanInvoice(token, url));
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally { setStage('idle'); }
+  }
+
   const canInvoice = can('STOCK_IMPORT');
   return (
     <View style={{ gap: 12 }}>
@@ -62,8 +87,11 @@ export function ImageScanner() {
         <Segmented<Task>
           value={task}
           onChange={(value) => {
+            if (stage !== 'idle') return;
             setTask(value);
             setPreview(undefined);
+            setPickedImage(undefined);
+            setUploadedUrl(undefined);
             setProductResult(undefined);
             setInvoice(undefined);
             setError('');
@@ -82,8 +110,8 @@ export function ImageScanner() {
             ? 'Dùng cho hàng không có mã vạch, mã bị mờ, hoặc để tạo nhanh sản phẩm mới. Chụp rõ tên và quy cách.'
             : 'AI đọc từng dòng hàng (tên, số lượng, đơn giá) và ghép với sản phẩm trong kho. Bạn duyệt lại trước khi nhập kho.'}
         </Text>
-        {provider === 'heuristic' ? (
-          <Text style={styles.warning}>Máy chủ chưa cấu hình AI (ANTHROPIC_API_KEY). Hãy dùng quét mã hoặc nhập tay.</Text>
+        {provider === 'not_configured' ? (
+          <Text style={styles.warning}>Máy chủ chưa cấu hình AI (GEMINI_API_KEY). Hãy dùng quét mã hoặc nhập tay.</Text>
         ) : null}
         <View style={styles.row}>
           <Button title="Chụp ảnh" icon="📷" style={styles.flex} loading={stage !== 'idle'} onPress={() => scan('camera')} />
@@ -107,7 +135,9 @@ export function ImageScanner() {
       ) : null}
 
       <ErrorBanner message={error} />
+      {error && pickedImage ? <Button title="Thử lại với ảnh này" variant="secondary" disabled={stage !== 'idle'} onPress={retry} /> : null}
 
+      {productResult ? <AiResultNotice result={productResult} /> : null}
       {productResult ? (
         productResult.suggestions.length ? (
           productResult.suggestions.map((suggestion, index) => (
@@ -130,59 +160,14 @@ export function ImageScanner() {
 function SuggestionCard({ suggestion, imageUrl }: { suggestion: AiSuggestion; imageUrl?: string }) {
   const navigation = useNavigation<RootNavigation>();
   const { can } = useAuth();
-  const confidence = Math.round(suggestion.confidence * 100);
-  const matches = suggestion.matchedProducts ?? [];
-  return (
-    <Card>
-      <View style={styles.between}>
-        <Text style={styles.suggestionName}>{suggestion.normalizedName}</Text>
-        <Badge label={`${confidence}%`} tone={confidence >= 75 ? 'success' : confidence >= 50 ? 'warning' : 'danger'} />
-      </View>
-      <Text style={styles.meta}>
-        {suggestion.category} · {suggestion.unit}
-        {suggestion.barcode ? ` · ${suggestion.barcode}` : ''}
-      </Text>
-      <Text style={styles.text}>{suggestion.description}</Text>
-      {matches.length ? (
-        <>
-          <Text style={styles.label}>Sản phẩm có sẵn khớp với ảnh:</Text>
-          {matches.map((product) => (
-            <ProductCard key={product.id} product={product} onPress={() => navigation.navigate('ProductDetail', { productId: product.id })} />
-          ))}
-        </>
-      ) : (
-        <Text style={styles.meta}>Chưa có sản phẩm nào trong kho khớp với gợi ý này.</Text>
-      )}
-      {can('PRODUCT_CREATE') ? (
-        <Button
-          title={matches.length ? 'Vẫn tạo sản phẩm mới' : 'Tạo sản phẩm từ gợi ý'}
-          variant={matches.length ? 'ghost' : 'primary'}
-          onPress={() =>
-            navigation.navigate('ProductForm', {
-              prefill: {
-                name: suggestion.normalizedName,
-                category: suggestion.category,
-                unit: suggestion.unit,
-                description: suggestion.description,
-                barcode: suggestion.barcode,
-                // Dùng luôn ảnh vừa chụp làm ảnh sản phẩm.
-                imageUrl,
-              },
-            })
-          }
-        />
-      ) : null}
-      <Text style={styles.hint}>Hãy kiểm tra lại thông tin AI gợi ý trước khi lưu.</Text>
-    </Card>
-  );
+  return <AiSuggestionCard suggestion={suggestion} applyLabel={suggestion.matchedProducts?.length ? 'Vẫn mở form tạo mới' : 'Mở form tạo sản phẩm'} onApply={can('PRODUCT_CREATE') ? (input) => navigation.navigate('ProductForm', { prefill: { ...input, imageUrl } }) : undefined} />;
 }
 
-/* ----------------------------------- Đọc phiếu nhập ----------------------------------- */
 
 interface ReviewLine {
   line: InvoiceLine;
   /** undefined = chưa chọn, null = bỏ qua dòng này. */
-  product: Product | null | undefined;
+  product: ProductCandidate | null | undefined;
   quantity: string;
 }
 
@@ -192,7 +177,7 @@ function InvoiceReview({ invoice, onDone }: { invoice: InvoiceScanResult; onDone
   const navigation = useNavigation<RootNavigation>();
   const { refresh: refreshNotifications } = useNotifications();
   const [rows, setRows] = useState<ReviewLine[]>(() =>
-    invoice.lines.map((line) => ({ line, product: line.candidates[0], quantity: String(line.quantity || '') })),
+    invoice.lines.map((line) => ({ line, product: aiService.invoiceCandidate(line), quantity: String(line.quantity || '') })),
   );
   const [updateCost, setUpdateCost] = useState(can('PRODUCT_UPDATE'));
   const [saving, setSaving] = useState(false);
@@ -215,9 +200,9 @@ function InvoiceReview({ invoice, onDone }: { invoice: InvoiceScanResult; onDone
 
   async function submit() {
     // Gộp các dòng cùng sản phẩm (backend không nhận trùng sản phẩm trong một lệnh).
-    const merged = new Map<string, { product: Product; quantity: number; unitPrice: number }>();
+    const merged = new Map<string, { product: ProductCandidate; quantity: number; unitPrice: number }>();
     for (const row of ready) {
-      const product = row.product as Product;
+      const product = row.product as ProductCandidate;
       const entry = merged.get(product.id) ?? { product, quantity: 0, unitPrice: row.line.unitPrice };
       entry.quantity += parseNumberInput(row.quantity) ?? 0;
       merged.set(product.id, entry);
@@ -331,7 +316,7 @@ function InvoiceRow({ row, onChange, onCreate }: { row: ReviewLine; onChange: (p
       </Text>
 
       {product === null ? (
-        <Text style={styles.link} onPress={() => onChange({ product: line.candidates[0] })}>Đã bỏ qua · Hoàn tác</Text>
+        <Text style={styles.link} onPress={() => onChange({ product: aiService.invoiceCandidate(line) })}>Đã bỏ qua · Hoàn tác</Text>
       ) : (
         <>
           <View style={styles.wrap}>

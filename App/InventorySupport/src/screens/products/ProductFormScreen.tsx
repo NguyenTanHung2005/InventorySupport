@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Card, Chip, ErrorBanner, Field, Loading } from '../../components/ui';
+import { AiResultNotice, AiSuggestionCard } from '../../components/AiSuggestionCard';
+import type { AiResult } from '../../types';
 import { colors } from '../../constants/theme';
 import type { RootStackParamList } from '../../navigation/types';
 import { aiService } from '../../services/ai.service';
@@ -58,6 +60,8 @@ export function ProductFormScreen({ route, navigation }: Props) {
           category: prefill.category ?? '',
           unit: prefill.unit ?? 'cái',
           description: prefill.description ?? '',
+          price: prefill.price === undefined ? '' : String(prefill.price),
+          costPrice: prefill.costPrice === undefined ? '' : String(prefill.costPrice),
           imageUrl: prefill.imageUrl,
         }
       : {}),
@@ -67,10 +71,18 @@ export function ProductFormScreen({ route, navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<AiResult>();
+  const generation = useRef(0);
+  const pending = useRef(false);
+  useEffect(() => () => { generation.current++; }, []);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const set = <K extends keyof FormState>(key: K) => (value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }));
+  const set = <K extends keyof FormState>(key: K) => (value: FormState[K]) => {
+    generation.current++;
+    setSuggestions(undefined);
+    setForm((current) => ({ ...current, [key]: value }));
+  };
 
   useEffect(() => {
     void productService.categories(token).then(setCategories).catch(() => undefined);
@@ -112,23 +124,18 @@ export function ProductFormScreen({ route, navigation }: Props) {
 
   /** Dùng AI chuẩn hóa tên, gợi ý danh mục/đơn vị/mô tả từ tên đang nhập. */
   async function suggest() {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || pending.current) return;
+    pending.current = true;
+    const id = ++generation.current;
+    setSuggestions(undefined);
     setSuggesting(true);
     try {
       const result = await aiService.normalizeProduct(token, form.name.trim());
-      const first = result.suggestions[0];
-      if (!first) return;
-      setForm((current) => ({
-        ...current,
-        name: first.normalizedName || current.name,
-        category: first.category || current.category,
-        unit: first.unit || current.unit,
-        description: current.description || first.description,
-        barcode: current.barcode || first.barcode || '',
-      }));
+      if (id === generation.current) setSuggestions(result);
     } catch (cause) {
-      notify('AI chưa gợi ý được', (cause as Error).message);
+      if (id === generation.current) notify('AI chưa gợi ý được', (cause as Error).message);
     } finally {
+      pending.current = false;
       setSuggesting(false);
     }
   }
@@ -213,6 +220,18 @@ export function ProductFormScreen({ route, navigation }: Props) {
           <Field label="Tên sản phẩm *" value={form.name} onChangeText={set('name')} placeholder="Ví dụ: Coca-Cola 390ml" error={submitted ? errors.name : undefined} />
           {can('AI_USE') ? (
             <Button title="Gợi ý danh mục, đơn vị, mô tả bằng AI" icon="✨" variant="secondary" loading={suggesting} disabled={!form.name.trim()} onPress={suggest} />
+          ) : null}
+          {suggestions ? (
+            <>
+              <AiResultNotice result={suggestions} />
+              {productId ? <Text style={styles.meta}>Áp dụng gợi ý giữ nguyên đơn vị kho hiện tại: {form.unit}. Bạn đang sửa một sản phẩm có sẵn.</Text> : null}
+              {suggestions.suggestions.length > 1 ? <Text style={styles.meta}>Nhiều sản phẩm: hãy chọn một thẻ cho form này hoặc mở tab Chuẩn hóa để tạo từng món.</Text> : null}
+              {suggestions.suggestions.map((suggestion, index) => <AiSuggestionCard key={`${suggestion.normalizedName}-${index}`} suggestion={suggestion} onApply={(input) => {
+                setForm((current) => ({ ...current, name: input.name, description: input.description ?? '', category: input.category ?? current.category, unit: productId ? current.unit : input.unit ?? current.unit, barcode: current.barcode || input.barcode || '' }));
+                generation.current++;
+                setSuggestions(undefined);
+              }} />)}
+            </>
           ) : null}
           <Field label="Mã barcode" value={form.barcode} onChangeText={set('barcode')} placeholder="Để trống để hệ thống tự sinh" keyboardType="number-pad" autoCapitalize="none" />
           <Field label="Danh mục" value={form.category} onChangeText={set('category')} placeholder="Ví dụ: Nước giải khát" />

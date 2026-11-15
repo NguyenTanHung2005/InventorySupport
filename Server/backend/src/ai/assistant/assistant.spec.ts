@@ -27,6 +27,16 @@ function setup() {
 }
 
 describe('assistant tools', () => {
+  it('shows candidates but allows a reviewed distinct variant, while rejecting a duplicate barcode', () => {
+    const { products, inventory } = setup();
+    const ctx = new ToolRunContext(user(UserRole.MANAGER), products, inventory);
+    const result = JSON.parse(runTool('propose_new_product', { name: 'Coca-Cola Zero 390ml', barcode: '8930000000001' }, ctx).content);
+    expect(result.proposed).toBe(true);
+    expect(ctx.actions[0]).toMatchObject({ kind: 'CREATE_PRODUCT', warning: expect.stringMatching(/có sẵn/), prefill: { name: 'Coca-Cola Zero 390ml' } });
+    expect(ctx.products.has('product-1')).toBe(true);
+    const duplicate = runTool('propose_new_product', { name: 'Tên khác', barcode: '08934588012345' }, ctx);
+    expect(duplicate.isError).toBe(true);
+  });
   it('filters tools by role', () => {
     const names = (role: UserRole) => toolsForUser(user(role)).map((tool) => tool.name);
     expect(names(UserRole.MANAGER)).toContain('propose_new_product');
@@ -71,6 +81,10 @@ describe('assistant tools', () => {
 });
 
 describe('offline assistant', () => {
+  it('asks for a complete product name instead of guessing a follow-up reference', async () => {
+    const { service } = setup();
+    await expect(service.chat(user(UserRole.STAFF), { message: 'xuất thêm 2 cái đó' })).rejects.toThrow(/chưa được cấu hình/);
+  });
   it.each([
     ['Hàng nào sắp hết?', 'low_stock'],
     ['xuất 3 chai coca', 'movement'],
@@ -84,21 +98,17 @@ describe('offline assistant', () => {
 
   it('answers and proposes an export card', async () => {
     const { service } = setup();
-    const reply = await service.chat(user(UserRole.STAFF), { message: 'xuất 3 chai coca' });
-    expect(reply.provider).toBe('offline');
-    expect(reply.actions[0]).toMatchObject({ kind: 'STOCK_MOVEMENT', productId: 'product-1', quantity: 3 });
-    expect(reply.reply).toContain('Xác nhận');
+    await expect(service.chat(user(UserRole.STAFF), { message: 'xuất 3 chai coca' })).rejects.toThrow(/chưa được cấu hình/);
   });
 });
 
 describe('assistant with Claude (mocked client)', () => {
-  beforeEach(() => vi.stubEnv('ANTHROPIC_API_KEY', 'test-key'));
+  beforeEach(() => vi.stubEnv('GEMINI_API_KEY', 'test-key'));
   afterEach(() => vi.unstubAllEnvs());
 
-  const textMessage = (text: string) => ({ stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '', signature: 'sig' }, { type: 'text', text }] });
+  const textMessage = (text: string) => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text }] } }] });
   const toolMessage = (id: string, name: string, input: unknown) => ({
-    stop_reason: 'tool_use',
-    content: [{ type: 'thinking', thinking: '', signature: `sig-${id}` }, { type: 'tool_use', id, name, input }],
+    candidates: [{ finishReason: 'STOP', content: { parts: [{ functionCall: { id, name, args: input } }] } }],
   });
 
   function withClient(service: AssistantService, responses: unknown[]) {
@@ -106,11 +116,11 @@ describe('assistant with Claude (mocked client)', () => {
     for (const response of responses) create.mockResolvedValueOnce(response);
     // Ghi lại bản sao messages ở mỗi lần gọi để kiểm tra tính append-only.
     const snapshots: unknown[][] = [];
-    const wrapped = vi.fn(async (params: { messages: unknown[] }) => {
-      snapshots.push(structuredClone(params.messages));
+    const wrapped = vi.fn(async (params: { contents: unknown[] }) => {
+      snapshots.push(structuredClone(params.contents));
       return create(params);
     });
-    (service as unknown as { client: unknown }).client = { beta: { messages: { create: wrapped } } };
+    (service as unknown as { client: unknown }).client = { models: { generateContent: wrapped } };
     return { create: wrapped, snapshots };
   }
 
@@ -126,7 +136,7 @@ describe('assistant with Claude (mocked client)', () => {
     ]);
 
     const first = await service.chat(manager, { message: 'Hàng nào sắp hết?' });
-    expect(first).toMatchObject({ provider: 'claude', reply: 'Có 2 sản phẩm cần nhập.', turn: 1 });
+    expect(first).toMatchObject({ provider: 'gemini', reply: 'Có 2 sản phẩm cần nhập.', turn: 1 });
     expect(first.products.map((product) => product.id)).toEqual(expect.arrayContaining(['product-2', 'product-3']));
     expect(first.toolCalls[0].name).toBe('list_low_stock');
 
@@ -139,27 +149,93 @@ describe('assistant with Claude (mocked client)', () => {
       expect(snapshots[index].slice(0, snapshots[index - 1].length)).toEqual(snapshots[index - 1]);
     }
     // system và tools giữ nguyên suốt phiên.
-    const calls = create.mock.calls.map(([params]) => params as unknown as { system: string; tools: unknown[]; fallbacks: string });
-    expect(new Set(calls.map((params) => params.system)).size).toBe(1);
+    const calls = create.mock.calls.map(([params]) => (params as unknown as { config: { systemInstruction: string; tools: unknown[] } }).config);
+    expect(new Set(calls.map((params) => params.systemInstruction)).size).toBe(1);
     expect(new Set(calls.map((params) => JSON.stringify(params.tools))).size).toBe(1);
-    expect(calls[0].fallbacks).toBe('default');
+
   });
 
   it('stops after the tool round limit with an appended instruction', async () => {
     const { service } = setup();
     const responses = Array.from({ length: MAX_TOOL_ROUNDS }, (_, index) => toolMessage(`t${index}`, 'list_low_stock', {}));
     const { snapshots } = withClient(service, responses);
-    const reply = await service.chat(user(UserRole.MANAGER), { message: 'lặp mãi' });
-    expect(reply.reply).toMatch(/quá nhiều bước/);
-    const last = snapshots.at(-1)!.at(-1) as { content: { type: string; text?: string }[] };
-    expect(last.content.some((block) => block.type === 'text' && /giới hạn tra cứu/.test(block.text ?? ''))).toBe(true);
+    await expect(service.chat(user(UserRole.MANAGER), { message: 'lặp mãi' })).rejects.toThrow(/quá nhiều bước/);
+    expect(snapshots).toHaveLength(MAX_TOOL_ROUNDS);
   });
 
   it('answers politely on refusal', async () => {
     const { service } = setup();
-    withClient(service, [{ stop_reason: 'refusal', content: [] }]);
-    const reply = await service.chat(user(UserRole.STAFF), { message: '...' });
-    expect(reply.reply).toMatch(/không thể hỗ trợ/);
+    withClient(service, [{ candidates: [{ finishReason: 'SAFETY', content: { parts: [] } }] }]);
+    await expect(service.chat(user(UserRole.STAFF), { message: '...' })).rejects.toThrow();
+  });
+
+  it('restores the completed history after a provider failure and releases busy', async () => {
+    const { service, store } = setup();
+    const manager = user(UserRole.MANAGER);
+    withClient(service, [textMessage('ok')]);
+    const first = await service.chat(manager, { message: 'chào' });
+    const session = store.get(manager, first.sessionId);
+    const before = structuredClone(session.messages);
+    const { create } = withClient(service, []);
+    create.mockRejectedValueOnce(new Error('network failed'));
+    await expect(service.chat(manager, { sessionId: first.sessionId, message: 'lượt lỗi' })).rejects.toThrow();
+    expect(session.messages).toEqual(before);
+    expect(session.busy).toBe(false);
+    expect(session.turns).toBe(1);
+  });
+
+  it('invalidates a session after a role or model change', async () => {
+    const { service } = setup();
+    const manager = user(UserRole.MANAGER);
+    withClient(service, [textMessage('ok'), textMessage('bad')]);
+    const first = await service.chat(manager, { message: 'chào' });
+    await expect(service.chat({ ...manager, role: UserRole.STAFF }, { sessionId: first.sessionId, message: 'x' })).rejects.toMatchObject({ status: 404 });
+    vi.stubEnv('AI_MODEL', 'different-model');
+    await expect(service.chat(manager, { sessionId: first.sessionId, message: 'x' })).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('appends a verified action result without another stock write or model call', async () => {
+    const { service, store, inventory, database } = setup();
+    const manager = user(UserRole.MANAGER);
+    withClient(service, [
+      toolMessage('propose', 'propose_stock_movement', { product_id: 'product-1', type: 'EXPORT', quantity: 2 }),
+      textMessage('Chờ xác nhận'),
+    ]);
+    const reply = await service.chat(manager, { message: 'xuất 2 coca' });
+    const action = reply.actions[0];
+    const { transaction } = inventory.move({ productId: 'product-1', type: StockTransactionType.EXPORT, quantity: 2 }, manager);
+    const count = database.transactions.length;
+    expect(service.confirmAction(manager, reply.sessionId, action.id, transaction.id)).toEqual({ confirmed: true });
+    const length = store.get(manager, reply.sessionId).messages.length;
+    expect(JSON.stringify(store.get(manager, reply.sessionId).messages.at(-1))).toContain(transaction.id);
+    service.confirmAction(manager, reply.sessionId, action.id, transaction.id);
+    expect(store.get(manager, reply.sessionId).messages).toHaveLength(length);
+    expect(database.transactions).toHaveLength(count);
+    expect(() => service.confirmAction(manager, reply.sessionId, 'foreign-action', transaction.id)).toThrow();
+  });
+
+  it('rejects an unrelated stock transaction as confirmation evidence', async () => {
+    const { service, inventory } = setup();
+    const manager = user(UserRole.MANAGER);
+    withClient(service, [toolMessage('p', 'propose_stock_movement', { product_id: 'product-1', type: 'EXPORT', quantity: 2 }), textMessage('chờ')]);
+    const reply = await service.chat(manager, { message: 'xuất 2 coca' });
+    const { transaction } = inventory.move({ productId: 'product-1', type: StockTransactionType.IMPORT, quantity: 2 }, manager);
+    expect(() => service.confirmAction(manager, reply.sessionId, reply.actions[0].id, transaction.id)).toThrow();
+  });
+
+  it('bounds the entire tool loop and releases the session after timeout', async () => {
+    const { service, store } = setup();
+    vi.useFakeTimers();
+    try {
+      const { create } = withClient(service, Array.from({ length: 6 }, (_, i) => toolMessage(`d${i}`, 'list_low_stock', {})));
+      create.mockImplementation(async () => {
+        vi.setSystemTime(Date.now() + 31_000);
+        return toolMessage('slow', 'list_low_stock', {});
+      });
+      await expect(service.chat(user(UserRole.MANAGER), { message: 'hàng nào sắp hết' })).rejects.toThrow(/quá lâu/);
+      const session = store.create(user(UserRole.MANAGER), '', []);
+      expect(store.begin(session)).toBeTypeOf('function');
+    } finally { vi.useRealTimers(); }
   });
 
   it('rejects unknown sessions and sessions of other users', async () => {

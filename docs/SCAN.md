@@ -81,9 +81,17 @@ Cần `ANTHROPIC_API_KEY` trên backend (model `claude-opus-5-5`, xem `docs/AI_A
 ```text
 Chụp bao bì ─► upload ─► POST /ai/scan-image ─► Claude đọc ảnh (structured output)
    ─► mỗi gợi ý: tên chuẩn, danh mục, đơn vị, mô tả, mã vạch đọc được, độ tin cậy
-   ─► backend đối chiếu: trùng barcode → khớp chắc chắn; không thì so tên (≥ 50% từ trùng)
+   ─► backend đối chiếu: ưu tiên barcode; nếu so tên thì loại ứng viên khác quy cách rõ ràng, vẫn cần người dùng kiểm tra
    ─► mobile: [Mở sản phẩm khớp] hoặc [Tạo sản phẩm từ gợi ý] (ảnh chụp thành ảnh sản phẩm)
 ```
+
+Gợi ý ảnh dùng cùng thẻ duyệt với chuẩn hóa văn bản: title, mô tả, danh mục, đơn vị
+có thể sửa trước khi mở form. Candidate AI không chứa giá nhập với vai trò thiếu quyền.
+AI trả quá 5 sản phẩm thì yêu cầu chia nhỏ/chụp ít món hơn, không cắt mất phần dư.
+
+Khi duyệt phiếu nhập, chỉ chọn sẵn một ứng viên duy nhất có đơn vị khớp rõ ràng. Có nhiều
+ứng viên, đơn vị khác hoặc thiếu đơn vị thì người dùng phải chọn sản phẩm; hoàn tác bỏ qua
+cũng áp dụng cùng quy tắc. Không tự coi ứng viên đứng đầu là đúng SKU.
 
 Dùng khi: hàng không có mã vạch, mã mờ/rách, hoặc tạo nhanh sản phẩm mới.
 
@@ -140,3 +148,7 @@ Quyền: Nhập kho. AI **không tự nhập kho**; người dùng luôn duyệt
 | POST | `/inventory/batch` | Theo `type` | `{ type, reason?, items: [{ productId, quantity }] }`, tối đa 200 dòng, tất cả hoặc không |
 | POST | `/ai/scan-image` | Dùng AI | Nhận diện sản phẩm |
 | POST | `/ai/scan-invoice` | Dùng AI + Nhập kho | Đọc phiếu nhập |
+# Lưu ý về tài liệu
+
+Các đoạn nhắc đến Claude bên dưới mô tả phiên bản trước. Xem [báo cáo chuyển đổi Gemini](AI_GEMINI_MIGRATION_REPORT.md) để cấu hình và kiểm thử.
+

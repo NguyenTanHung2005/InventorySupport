@@ -8,13 +8,14 @@ export class ApiError extends Error {
 
 type QueryValue = string | number | boolean | undefined | null;
 
-let unauthorizedHandler: (() => void) | undefined;
+let unauthorizedHandler: ((token: string) => void) | undefined;
 /** AuthProvider đăng ký hàm này để tự đăng xuất khi token hết hạn hoặc tài khoản bị khóa. */
-export function setUnauthorizedHandler(handler: (() => void) | undefined) {
+export function setUnauthorizedHandler(handler: ((token: string) => void) | undefined) {
   unauthorizedHandler = handler;
 }
 
 export interface RequestOptions {
+  timeoutMs?: number;
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
   query?: Record<string, QueryValue>;
@@ -22,7 +23,7 @@ export interface RequestOptions {
 }
 
 /** Hàm gọi API dùng chung: gắn JWT, chuyển query, và đọc thông báo lỗi tiếng Việt từ NestJS. */
-export async function request<T>(path: string, { method = 'GET', body, query, token }: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, { method = 'GET', body, query, token, timeoutMs }: RequestOptions = {}): Promise<T> {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null && value !== '') search.append(key, String(value));
@@ -30,9 +31,13 @@ export async function request<T>(path: string, { method = 'GET', body, query, to
   const url = `${API_URL}${path}${search.size ? `?${search}` : ''}`;
 
   let response: Response;
+  let text: string;
+  const controller = new AbortController();
+  const timer = timeoutMs === undefined ? undefined : setTimeout(() => controller.abort(), timeoutMs);
   try {
     response = await fetch(url, {
       method,
+      signal: controller.signal,
       headers: {
         Accept: 'application/json',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
@@ -40,14 +45,17 @@ export async function request<T>(path: string, { method = 'GET', body, query, to
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
+    text = await response.text();
   } catch {
+    if (controller.signal.aborted) throw new ApiError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.', 408);
     throw new ApiError(`Không kết nối được máy chủ (${API_URL}). Kiểm tra mạng hoặc EXPO_PUBLIC_API_URL.`, 0);
+  } finally {
+    clearTimeout(timer);
   }
 
-  const text = await response.text();
   const data = text ? safeJson(text) : undefined;
   if (!response.ok) {
-    if (response.status === 401 && token) unauthorizedHandler?.();
+    if (response.status === 401 && token) unauthorizedHandler?.(token);
     const message = (data as { message?: string | string[] } | undefined)?.message;
     throw new ApiError(
       Array.isArray(message) ? message.join('\n') : message || text || `Lỗi ${response.status}`,

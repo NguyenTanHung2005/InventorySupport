@@ -11,7 +11,7 @@ export const authService = {
       body: { name, email, password },
     }),
 
-  me: (token: string) => request<{ user: AuthUser; permissions: Permission[] }>('/auth/me', { token }),
+  me: (token: string) => request<{ user: AuthUser; permissions: Permission[] }>('/auth/me', { token, timeoutMs: 10_000 }),
 
   changePassword: (token: string, currentPassword: string, newPassword: string) =>
     request<{ message: string }>('/auth/change-password', {

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service.js';
 import { AuthUser, Product } from '../common/types.js';
+import { hasPermission, Permission } from '../common/permissions.js';
 import {
   optionalNumber,
   optionalString,
@@ -118,16 +119,34 @@ export class ProductsService {
       if (exact) return [exact];
     }
     const words = searchKey(hint.name).split(/\s+/).filter((word) => word.length > 1);
+    const size = (name: string) => {
+      const found = /(\d+(?:[.,]\d+)?)\s*(ml|lit|l|kg|g)\b/.exec(searchKey(name));
+      if (!found) return undefined;
+      const amount = Number(found[1].replace(',', '.'));
+      return `${amount * (['l', 'lit', 'kg'].includes(found[2]) ? 1000 : 1)}${['kg', 'g'].includes(found[2]) ? 'g' : 'ml'}`;
+    };
+    const wantedSize = size(hint.name);
     if (!words.length) return [];
     return products
+      .filter((product) => !wantedSize || !size(product.name) || size(product.name) === wantedSize)
       .map((product) => {
         const key = searchKey(`${product.name} ${product.normalizedName}`);
-        return { product, score: words.filter((word) => key.includes(word)).length / words.length };
+        const productWords = searchKey(product.name).split(/\s+/).filter((word) => word.length > 1);
+        const reverseScore = productWords.length ? productWords.filter((word) => searchKey(hint.name).includes(word)).length / productWords.length : 0;
+        return { product, score: Math.max(words.filter((word) => key.includes(word)).length / words.length, reverseScore) };
       })
       .filter(({ score }) => score >= 0.5)
       .sort((a, b) => b.score - a.score)
       .slice(0, 3)
       .map(({ product }) => product);
+  }
+
+  /** Ứng viên AI chỉ trả giá nhập cho vai trò được xem. */
+  matchPublic(user: AuthUser, hint: { barcode?: string; name: string }) {
+    return this.match(user, hint).map(({ costPrice, ...product }) => (
+      hasPermission(user.role, Permission.REPORT_VIEW) || hasPermission(user.role, Permission.PRODUCT_CREATE)
+        ? { ...product, costPrice } : product
+    ));
   }
 
   create(dto: CreateProductDto, user: AuthUser): Product {

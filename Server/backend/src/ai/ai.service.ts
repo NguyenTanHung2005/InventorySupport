@@ -7,12 +7,14 @@ import {
 import { readFileSync } from 'node:fs';
 import { isOwnUploadPath, resolveUploadPath } from '../uploads/upload-paths.js';
 import {
-  ClaudeInvoiceResult,
-  ClaudeProductResult,
-  ClaudeProductVision,
+  GeminiInvoiceResult,
+  GeminiProductResult,
+  GeminiProductVision,
   ImageMediaType,
-} from './claude-product-vision.js';
+} from './gemini-product-vision.js';
+import { geminiError } from './gemini-errors.js';
 import { NormalizeProductDto } from './dto/normalize-product.dto.js';
+import { requiredString } from '../common/validation.js';
 
 export interface NormalizedProduct {
   name: string;
@@ -31,6 +33,7 @@ export interface ProductSuggestion extends NormalizedProduct {
 }
 
 export interface NormalizeResult extends NormalizedProduct {
+  fallbackReason?: 'not_configured' | 'provider_unavailable';
   suggestions: ProductSuggestion[];
   hasMultipleProductTypes: boolean;
   correctedText: string;
@@ -45,37 +48,33 @@ const MEDIA_TYPES: Record<string, ImageMediaType> = {
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
-  private vision?: ClaudeProductVision;
+  private vision?: GeminiProductVision;
 
   get providerEnabled(): boolean {
-    return ClaudeProductVision.isConfigured();
+    return GeminiProductVision.isConfigured();
   }
 
   /**
-   * Chuẩn hóa mô tả văn bản: dùng Claude nếu đã cấu hình API key,
-   * lỗi hoặc chưa cấu hình thì quay về bộ luật heuristic.
+   * Chuẩn hóa mô tả bằng Gemini; báo lỗi khi chưa cấu hình hoặc dịch vụ không khả dụng.
    */
   async normalize(dto: NormalizeProductDto, categories: string[]): Promise<NormalizeResult> {
-    const text = dto.text?.trim();
-    if (!text) throw new BadRequestException('Cần nhập mô tả sản phẩm');
-    if (text.length > 1000) throw new BadRequestException('Mô tả tối đa 1000 ký tự');
-    if (!this.providerEnabled) return this.normalizeProduct({ text });
+    const text = requiredString(dto?.text, 'Tên hoặc mô tả sản phẩm', 1000);
+    if (!this.providerEnabled) throw new ServiceUnavailableException('Chức năng AI chưa được cấu hình. Bạn vẫn có thể thao tác thủ công.');
     try {
       return this.fromProvider(await this.getVision().normalizeText(text, categories), text);
     } catch (error) {
-      this.logger.warn(`Claude lỗi, dùng heuristic: ${(error as Error).message}`);
-      return this.normalizeProduct({ text });
+      if (error instanceof BadRequestException) throw error;
+      throw geminiError(error);
     }
   }
 
   /** Đọc phiếu giao hàng / hóa đơn nhập từ ảnh đã tải lên (docs/SCAN.md mục 3.2). */
-  async scanInvoice(imageUrl: string, storeId: string): Promise<ClaudeInvoiceResult> {
+  async scanInvoice(imageUrl: string, storeId: string): Promise<GeminiInvoiceResult> {
     const image = this.loadImage(imageUrl, storeId);
     try {
       return await this.getVision().readDeliveryNote(image);
     } catch (error) {
-      this.logger.error(`Đọc phiếu nhập thất bại: ${(error as Error).message}`);
-      throw new ServiceUnavailableException('AI chưa đọc được phiếu, vui lòng chụp thẳng, đủ sáng và thử lại');
+      throw geminiError(error);
     }
   }
 
@@ -84,7 +83,7 @@ export class AiService {
     if (!isOwnUploadPath(imageUrl, storeId)) throw new BadRequestException('Ảnh không hợp lệ');
     if (!this.providerEnabled) {
       throw new ServiceUnavailableException(
-        'Chưa cấu hình AI nhận diện ảnh (thiếu ANTHROPIC_API_KEY trên server). Hãy quét mã vạch hoặc nhập bằng tay.',
+        'Chưa cấu hình AI nhận diện ảnh (thiếu GEMINI_API_KEY trên server). Hãy quét mã vạch hoặc nhập bằng tay.',
       );
     }
     let base64: string;
@@ -103,17 +102,17 @@ export class AiService {
       const result = await this.getVision().analyzeImage(image, categories, note?.slice(0, 300));
       return this.fromProvider(result, result.correctedText || 'Ảnh sản phẩm');
     } catch (error) {
-      this.logger.error(`Nhận diện ảnh thất bại: ${(error as Error).message}`);
-      throw new ServiceUnavailableException('AI chưa nhận diện được ảnh, vui lòng thử lại hoặc chụp rõ hơn');
+      if (error instanceof BadRequestException) throw error;
+      throw geminiError(error);
     }
   }
 
-  private getVision(): ClaudeProductVision {
-    this.vision ??= new ClaudeProductVision();
+  private getVision(): GeminiProductVision {
+    this.vision ??= new GeminiProductVision();
     return this.vision;
   }
 
-  private fromProvider(result: ClaudeProductResult, input: string): NormalizeResult {
+  private fromProvider(result: GeminiProductResult, input: string): NormalizeResult {
     const suggestions: ProductSuggestion[] = result.suggestions.map((item) => ({
       name: item.name,
       normalizedName: item.normalizedName,
@@ -156,8 +155,9 @@ export class AiService {
 
     const text = input || 'Sản phẩm từ hình ảnh';
     const correctedText = this.correctSpelling(text);
-    const parts = correctedText.split(/[,;|\n]+/).map((part) => part.trim()).filter(Boolean);
-    const suggestions = (parts.length > 1 ? parts : [correctedText]).map((part) => this.toSuggestion(part, dto.imageUrl));
+    const parts = correctedText.split(/(?<!\d),|,(?!\d)|[;|\n]+/).map((part) => part.trim()).filter(Boolean);
+    if (parts.length > 5) throw new BadRequestException('Tối đa 5 sản phẩm mỗi lần. Hãy chia nhỏ nội dung.');
+    const suggestions = (parts.length > 1 ? parts : [correctedText]).map((part) => this.toSuggestion(part));
     const categories = new Set(suggestions.map((suggestion) => suggestion.category));
     const primary = suggestions[0];
 
@@ -176,7 +176,7 @@ export class AiService {
     };
   }
 
-  private toSuggestion(value: string, imageUrl?: string): ProductSuggestion {
+  private toSuggestion(value: string): ProductSuggestion {
     const lower = value.toLocaleLowerCase('vi-VN');
     const category = lower.includes('coca') || lower.includes('pepsi') || lower.includes('nước ngọt')
       ? 'Nước giải khát'
@@ -193,15 +193,15 @@ export class AiService {
           ? 'gói'
           : lower.includes('kg')
             ? 'kg'
-            : 'cái';
+            : '';
     const normalizedName = this.toVietnameseTitleCase(value);
     return {
       name: value,
       normalizedName,
       category,
       unit,
-      description: `${normalizedName} thuộc nhóm ${category.toLocaleLowerCase('vi-VN')}, đơn vị tính ${unit}.`,
-      confidence: imageUrl ? 0.6 : 0.8,
+      description: 'Gợi ý nhập liệu cơ bản từ bộ luật offline. Hãy bổ sung và kiểm tra mô tả sản phẩm.',
+      confidence: 0,
       source: 'heuristic',
       matchedTerms: value.split(/\s+/).filter((term) => term.length > 2),
     };
@@ -219,7 +219,7 @@ export class AiService {
     };
     return value
       .toLocaleLowerCase('vi-VN')
-      .replace(/\s+/g, ' ')
+      .replace(/[^\S\n]+/g, ' ')
       .trim()
       .split(/(\s+)/)
       .map((part) => {

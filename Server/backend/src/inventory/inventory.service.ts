@@ -155,6 +155,10 @@ export class InventoryService {
     );
   }
 
+  findTransaction(user: AuthUser, id: string) {
+    return this.database.transactions.find((item) => item.id === id && item.storeId === user.storeId);
+  }
+
   /** Số liệu tổng hợp cho Dashboard và màn Báo cáo. */
   summary(user: AuthUser, query: Pick<TransactionQuery, 'from' | 'to'>) {
     const products = this.products.active(user);

@@ -5,6 +5,7 @@ import { hasPermission, Permission } from '../../common/permissions.js';
 import { InventoryService } from '../../inventory/inventory.service.js';
 import { ProductsService } from '../../products/products.service.js';
 import { AssistantAction, AssistantProduct, AssistantToolCall } from './assistant.types.js';
+import { numericVariants } from '../../products/scan-code.js';
 
 /**
  * Bộ công cụ của trợ lý (docs/AI_ASSISTANT.md mục 5).
@@ -314,16 +315,23 @@ const TOOLS: ToolDefinition[] = [
     run: (input, ctx) => {
       const name = str(input, 'name');
       if (!name) throw new ToolInputError('Thiếu name');
+      const barcode = str(input, 'barcode', 64);
+      const candidates = ctx.productsService.match(ctx.user, { name, barcode });
+      if (barcode && candidates.some((product) => numericVariants(barcode).includes(product.barcode))) {
+        throw new ToolInputError('Barcode đã có trong kho. Hãy dùng sản phẩm có sẵn.');
+      }
+      for (const product of candidates) ctx.present(product);
       const action: AssistantAction = {
         id: `act-${randomUUID()}`,
         kind: 'CREATE_PRODUCT',
+        warning: candidates.length ? 'Có sản phẩm có sẵn gần giống. Hãy đối chiếu các ứng viên và xác nhận đây là một sản phẩm khác trước khi tạo.' : undefined,
         prefill: {
           name,
           category: str(input, 'category', 80),
           unit: str(input, 'unit', 30),
           price: num(input, 'price'),
           costPrice: num(input, 'cost_price'),
-          barcode: str(input, 'barcode', 64),
+          barcode,
           description: str(input, 'description', 1000),
         },
       };
