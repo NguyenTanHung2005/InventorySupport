@@ -1,298 +1,198 @@
-# Trợ lý AI - Mô hình và cách triển khai
+﻿# Luồng xử lý AI – Inventory Support
 
-Tài liệu mô tả kiến trúc, mô hình AI, cơ chế an toàn và cách triển khai trợ lý AI của
-**Inventory Support** (đề tài 7: *Hỗ trợ kiểm kê cửa hàng nhỏ*). Code hiện thực bám theo
-tài liệu này; khi thay đổi thiết kế, cập nhật tài liệu trước.
+Cập nhật 15/11/2026. Căn cứ nghiệp vụ: [NghiepVu.md](../NghiepVu.md), đặc biệt mục 2, 3.2–3.5 và 5. Tài liệu đối chiếu mã hiện tại, không xác nhận chất lượng Gemini trên dữ liệu thật. Backend đã đổi mã sang MongoDB; còn chờ cài package và nghiệm thu Atlas thật.
 
----
+## 1. Mục tiêu và giới hạn nghiệp vụ
 
-## 1. Mục tiêu và phạm vi
+AI hỗ trợ người dùng tra kho và giảm nhập liệu, thông qua bốn nhánh: chuẩn hóa chữ, nhận diện ảnh sản phẩm, đọc phiếu nhập và hỏi đáp có công cụ. Backend là nguồn dữ liệu nghiệp vụ; model không tự quyết định tồn, cửa hàng hoặc quyền.
 
-Trợ lý AI giúp nhân viên cửa hàng nhỏ làm nhanh ba việc mà không cần thao tác nhiều màn hình:
+- Sản phẩm mới có tồn 0; tạo sản phẩm và nhập tồn là hai thao tác riêng.
+- Danh mục/nhà cung cấp là chuỗi, không tự tạo collection hoặc nghiệp vụ quản lý riêng.
+- Barcode là mã tra hàng; không thêm trường SKU riêng. Tên gần giống là ứng viên cần đối chiếu, không chứng minh hai mặt hàng là một.
+- Kiểm kê là `ADJUSTMENT` trực tiếp theo quyền, chưa có phân công, gửi duyệt hoặc phê duyệt phiên.
+- Không dùng AI để thay đổi tài khoản/quyền, xóa hàng, tự quy đổi đơn vị, dự báo hay xử lý kế toán. Bộ công cụ chat hiện chỉ đọc và tạo đề xuất.
 
-| Năng lực | Người dùng làm gì | AI trả về |
-|---|---|---|
-| **Chuẩn hóa mô tả** | Gõ "nuoc ngot coca chai 390ml, banh oreo" | Tên chuẩn, danh mục, đơn vị, mô tả cho từng sản phẩm |
-| **Nhận diện ảnh** | Chụp bao bì sản phẩm | Gợi ý sản phẩm + mã vạch đọc được + đối chiếu hàng có sẵn |
-| **Hỏi đáp kho** (mới) | Hỏi "Hàng nào sắp hết?", "Coca còn bao nhiêu?", "Xuất 3 chai coca" | Câu trả lời dựa trên dữ liệu thật của cửa hàng + **thẻ đề xuất** thao tác để người dùng bấm xác nhận |
+## 2. Phân quyền áp dụng cho AI
 
-### Chuẩn hóa từ tên hàng
+| Chức năng | ADMIN | MANAGER | STAFF | VIEWER |
+| --- | --- | --- | --- | --- |
+| Chuẩn hóa chữ, nhận diện ảnh, chat (`AI_USE`) | Có | Có | Có | Không |
+| Đề xuất mở form tạo sản phẩm (`PRODUCT_CREATE`) | Có | Có | Không | Không |
+| Đề xuất nhập (`STOCK_IMPORT`) | Có | Có | Không | Không |
+| Đề xuất xuất (`STOCK_EXPORT`) | Có | Có | Có | Không |
+| Đề xuất kiểm kê (`STOCK_ADJUST`) | Có | Có | Không | Không |
+| Đọc phiếu nhập (`AI_USE` + `STOCK_IMPORT`) | Có | Có | Không | Không |
+| Công cụ tổng hợp (`REPORT_VIEW`, sau kiểm tra `AI_USE`) | Có | Có | Không | Không |
 
-Người dùng có thể chỉ nhập tên. Claude sửa chính tả, phân biệt và tách từng sản phẩm,
-viết title rõ nghĩa trong `suggestions[].normalizedName`, viết mô tả riêng trong
-`suggestions[].description`, gợi ý danh mục và đơn vị. `suggestions[].name` là cụm tên
-gốc của riêng món đó; `correctedText` là văn bản đã sửa của cả đầu vào.
+VIEWER có quyền xem báo cáo thường nhưng không có `AI_USE`, nên không dùng chat để xem báo cáo. STAFF có thể tra hàng sắp hết qua công cụ đọc kho nhưng không nhận danh sách thông báo cảnh báo như ADMIN/MANAGER.
 
-Tối đa 5 món mỗi lần. `hasMoreProducts` trong output provider giúp phát hiện vượt giới hạn;
-backend yêu cầu chia nhỏ, không âm thầm bỏ món thứ sáu. Hai món cùng danh mục vẫn là
-hai sản phẩm. Dấu phẩy thập phân như 1,5 lít không phải ranh giới sản phẩm.
+JWT guard xác định người dùng; controller kiểm tra quyền AI; bộ tools lọc theo quyền và kiểm tra lại khi thực thi; API nghiệp vụ kiểm quyền một lần nữa khi lưu. `storeId` lấy từ người đăng nhập, không nhận lựa chọn cửa hàng từ model.
 
-App hiện từng thẻ có thể sửa title, mô tả, danh mục, đơn vị; đối chiếu sản phẩm có sẵn
-trong đúng cửa hàng. Title ánh xạ vào tên sản phẩm khi người dùng bấm áp dụng. Không
-tự áp dụng món đầu, không tự đổi đơn vị khi sửa hàng đã có; đơn vị chưa rõ phải xác nhận.
-Title có thêm loại hàng/đơn vị vẫn được đối chiếu với tên ngắn trong kho. Tên gần giống
-chỉ là ứng viên, không chặn vĩnh viễn biến thể mới: thẻ tạo mới có cảnh báo đối chiếu và
-người dùng vẫn phải mở form để duyệt. Barcode đã có (kể cả dạng số tương đương) bị từ chối.
-Chuẩn hóa chỉ chuẩn bị thông tin hàng: số lượng/giá nhập do người dùng bổ sung qua
-nghiệp vụ nhập kho. AI không suy ra giá, barcode, thương hiệu hay quy cách còn thiếu.
+Giá nhập trong kết quả đối chiếu AI/thẻ sản phẩm được lọc theo `REPORT_VIEW` hoặc `PRODUCT_CREATE`. Đây không phải cam kết che giá nhập ở tất cả API: như NghiepVu.md đã ghi, `/inventory/summary` hiện yêu cầu `PRODUCT_VIEW`, cần rà soát riêng.
 
-Output được kiểm tra độ dài theo giới hạn lưu sản phẩm, confidence hữu hạn trong 0..1,
-mô tả không rỗng hoặc trùng nguyên title, và stop reason phải hoàn tất. JSON đúng schema
-vẫn có thể sai về nội dung, nên luôn cần người dùng duyệt. Confidence là model tự đánh giá.
+## 3. Kiến trúc và công nghệ
 
-Nếu thiếu key hoặc provider lỗi, `source=heuristic` kèm `fallbackReason=not_configured`
-hoặc `provider_unavailable`. UI cảnh báo offline chỉ hỗ trợ sửa/tách cơ bản; không hiển thị
-confidence 80% giả hoặc coi mô tả mẫu là khả năng viết của AI. `GET /ai/status` chỉ là trạng
-thái cấu hình. SDK chờ 30 giây/lần, không retry, chat có deadline tổng 60 giây; app chờ
-chuẩn hóa/ảnh/phiếu 40 giây và chat 70 giây.
-
-Bộ ca đánh giá và các giới hạn kiểm chứng: [AI_NORMALIZATION_EVAL.md](AI_NORMALIZATION_EVAL.md).
-
-**Ngoài phạm vi** (đúng ràng buộc của đề tài, *không mở rộng thành ERP*): kế toán, công nợ,
-đơn đặt hàng nhà cung cấp, dự báo nhu cầu. Trợ lý **không tự ghi dữ liệu**.
-
----
-
-## 2. Kiến trúc tổng thể
-
-```text
-┌──────────── Mobile (Expo) ────────────┐         ┌──────────────── Backend (NestJS) ────────────────┐
-│ AiScreen                              │  JWT    │ AssistantController  POST /ai/assistant/chat     │
-│  ├─ Hỏi đáp  (AssistantChat)  ────────┼────────►│   │ kiểm tra quyền AI_USE + giới hạn tần suất     │
-│  │    • tin nhắn, thẻ sản phẩm        │         │   ▼                                              │
-│  │    • thẻ đề xuất ─► Xác nhận ──────┼──┐      │ AssistantService                                 │
-│  └─ Chuẩn hóa (NormalizePanel)        │  │      │   ├─ có API key ─► Claude (tool use loop) ───┐   │
-│ ScannerScreen (quét ảnh AI)           │  │      │   └─ không có  ─► OfflineAssistant (luật)    │   │
-└───────────────────────────────────────┘  │      │ AssistantSessionStore (lịch sử append-only)  │   │
-                                           │      │ AssistantTools ── ProductsService ◄──────────┘   │
-                                           │      │                └─ InventoryService (chỉ đọc)     │
-                                           │      └──────────────────────────────────────────────────┘
-                                           └──► API nghiệp vụ thường (/inventory/movement, /products)
-                                                 → kiểm tra quyền lần nữa rồi mới ghi dữ liệu
+```mermaid
+flowchart TD
+    A[App Expo / React Native] --> B[NestJS: JWT và quyền AI]
+    B --> C{Loại yêu cầu}
+    C --> D[AiService: chuẩn hóa / ảnh / phiếu]
+    C --> E[AssistantService: chat]
+    D --> F[Gemini qua Google GenAI SDK]
+    E --> F
+    E --> G[Tools đọc dữ liệu / tạo đề xuất]
+    G --> H[ProductsService / InventoryService]
+    H --> I[DatabaseService: MongoDB]
+    F --> J[Kiểm tra kết quả và trả gợi ý]
+    G --> J
+    J --> K[Người dùng xem / sửa / xác nhận]
+    K --> L[API sản phẩm hoặc kho kiểm tra lại và lưu]
 ```
 
-Nguyên tắc: **AI chỉ đọc và đề xuất; con người xác nhận; API nghiệp vụ là nơi ghi.**
+Provider hiện tại là Gemini qua `@google/genai`, cấu hình `GEMINI_API_KEY` và `AI_MODEL` ở backend. Mặc định model trong mã là `gemini-3.5-flash-lite`; khả năng dùng thực tế cần kiểm tra tài khoản. API key không đưa vào APK hoặc `EXPO_PUBLIC_*`.
 
----
+Ảnh upload ở máy backend, theo `UPLOAD_DIR` (mặc định `uploads`); app giữ URL `/uploads/<storeId>/<file>`. Backend kiểm tra đường dẫn thuộc cửa hàng và đọc ảnh thành base64 khi gọi Gemini. Điện thoại cùng Wi-Fi gọi địa chỉ backend qua `EXPO_PUBLIC_API_URL`; gọi Gemini vẫn cần Internet.
 
-## 3. Mô hình AI
+Claude/offline còn file hoặc kiểu dữ liệu cũ trong repo, không phải luồng dự phòng đang chạy. Không áp dụng các cấu hình thinking/caching/beta hoặc chi phí Claude cũ cho luồng Gemini.
 
-| Hạng mục | Lựa chọn | Lý do |
-|---|---|---|
-| Nhà cung cấp | Anthropic Claude qua `@anthropic-ai/sdk` | Hỗ trợ vision, tool use, structured output trong một API |
-| Model | `claude-opus-5-5` (đổi bằng `AI_MODEL`) | Model Opus hiện hành, hiểu tiếng Việt tốt, giá $4/$20 mỗi 1M token |
-| Mức suy luận | `output_config.effort: "low"` (đổi bằng `AI_EFFORT`) | Trả lời hội thoại cần nhanh; câu hỏi kho không cần suy luận sâu |
-| Thinking | Adaptive (mặc định, luôn bật trên Opus 5.5) | Không gửi `budget_tokens` hay `disabled` (Opus 5.5 trả 400) |
-| Dự phòng | `fallbacks: "default"` + beta `server-side-fallback-2026-07-01` | Nếu bộ lọc an toàn từ chối nhầm, server tự chạy lại trên model dự phòng |
-| Prompt caching | `cache_control: {type: "ephemeral"}` ở cấp request | `system` + `tools` cố định nên được cache, giảm chi phí các lượt sau |
-| Chạy offline | `OfflineAssistant` (bộ luật từ khóa tiếng Việt) | Demo được khi không có API key / mất mạng |
+## 4. Luồng chat và quản lý phiên
 
-Ba năng lực dùng ba kiểu gọi khác nhau:
+### 4.1. Một lượt hỏi đáp
 
-1. **Chuẩn hóa mô tả** - một lần gọi, *structured output* (`output_config.format` JSON schema).
-2. **Nhận diện ảnh** - một lần gọi, ảnh base64 + structured output.
-3. **Hỏi đáp kho** - *vòng lặp tool use*: model gọi công cụ đọc dữ liệu, backend thực thi,
-   trả kết quả, lặp tối đa `MAX_TOOL_ROUNDS = 6` vòng mỗi câu hỏi.
+1. App gửi `POST /ai/assistant/chat` với `message` và `sessionId` nếu có. Backend kiểm tra quyền, nội dung không rỗng và tối đa 1.000 ký tự, cấu hình provider và tần suất.
+2. Tạo phiên mới hoặc lấy phiên đúng người dùng, cửa hàng, vai trò và model. Prompt và bộ tools được ghim khi tạo phiên.
+3. Khóa phiên đang xử lý, lưu mốc lịch sử trước lượt mới rồi gửi nội dung đến Gemini.
+4. Khi model yêu cầu gọi hàm, backend kiểm tra tool, quyền và tham số; lấy dữ liệu từ service hoặc tạo thẻ đề xuất trong ngữ cảnh lượt. Kết quả trả về model dưới dạng function response.
+5. Lặp tối đa 6 vòng. Nếu không hoàn tất thì báo lỗi yêu cầu chia nhỏ, không khẳng định đã có câu trả lời đầy đủ.
+6. Khi hoàn tất, trả `provider: "gemini"`, `reply`, `products`, `actions`, `toolCalls`, `turn`, `maxTurns` và `sessionId`. Chỉ ghi nhận action của lượt thành công vào phiên.
+7. Khi lỗi, bỏ phần hội thoại chưa hoàn tất về mốc trước lượt, giữ các lượt thành công và giải phóng khóa phiên.
 
-API key chỉ nằm trên backend (`ANTHROPIC_API_KEY`), không bao giờ xuống mobile.
+Model phải tra công cụ trước khi trả lời tồn/giao dịch/số liệu; nhiều sản phẩm khớp thì hỏi người dùng chọn; dữ liệu tên/mô tả/ghi chú từ tools được xem là dữ liệu, không phải chỉ thị. Prompt là hướng dẫn model, không thay thế kiểm quyền và validation bằng mã.
 
----
+### 4.2. Giới hạn phiên
 
-## 4. Thiết kế hội thoại (session)
+| Giới hạn | Hiện tại |
+| --- | --- |
+| Lưu trữ | RAM, không nằm trong JSON; restart có thể mất phiên |
+| Hết hạn | 2 giờ không hoạt động |
+| Số lượt | 30 lượt thành công/phiên |
+| Số phiên | Tối đa 5/người dùng; loại phiên cũ nhất |
+| Đồng thời | Một yêu cầu/phiên, xung đột trả 409 |
+| Tần suất chat | Mặc định 20 yêu cầu/5 phút/người, đổi bằng `AI_RATE_LIMIT` |
+| Timeout | SDK 30 giây/lần; deadline chat tổng 60 giây |
 
-### 4.1 Lưu phiên trên server, lịch sử chỉ nối thêm
+Hết phiên, đổi role/model hoặc phiên không thuộc người dùng trả 404. Mobile quản lý việc bắt đầu lại qua store; không tự gửi lại giao dịch kho chỉ vì lỗi phiên. Reset phải bỏ response chat cũ để không hồi sinh phiên đã xóa. Không suy ra rate limit chat được áp dụng cho mọi endpoint ảnh/chuẩn hóa.
 
-Với Opus 5.5, mỗi *thinking block* gắn chữ ký với **toàn bộ phần hội thoại phía trước**
-(`system`, `tools`, các message trước nó). Nếu lượt sau gửi lại lịch sử đã bị sửa, xóa hoặc
-sắp xếp lại, API sẽ từ chối block đó. Vì vậy:
+## 5. Luồng theo từng nghiệp vụ
 
-- Backend giữ **toàn bộ** lịch sử (gồm thinking, `tool_use`, `tool_result`) trong
-  `AssistantSessionStore`, mobile chỉ gửi `sessionId` + câu hỏi mới.
-- Lịch sử các lượt **đã hoàn tất chỉ nối thêm**. Khi lỗi giữa lượt, backend bỏ riêng phần chưa hoàn tất về mốc trước lượt đó; không sửa prefix hoặc thinking block của các lượt thành công.
-- `system` prompt và danh sách `tools` **được đóng băng khi tạo phiên** (theo vai trò lúc đó).
-- Model cũng được ghim vào phiên. Nếu đổi model hoặc vai trò, phiên cũ trả 404 để app bắt đầu phiên mới, tránh tái dùng quyền/prompt cũ.
-- Gửi `thinking.block_binding.prefix_mismatch_behavior: "drop_block"` (beta
-  `thinking-binding-controls-2026-08-01`): nếu có lỗi lệch lịch sử, API bỏ block lỗi thay vì
-  trả 400, hội thoại vẫn tiếp tục.
-- Lợi ích phụ: prefix ổn định nên prompt cache trúng nhiều hơn.
+### 5.1. Chuẩn hóa tên sản phẩm
 
-### 4.2 Giới hạn phiên
+1. Người có `AI_USE` nhập tên/mô tả tại `NormalizePanel` hoặc form có tích hợp chuẩn hóa.
+2. App gọi `POST /ai/normalize-product`; backend lấy danh mục cửa hàng làm ngữ cảnh và gọi Gemini trích dữ liệu theo schema.
+3. Kết quả tách từng món, sửa chính tả, gợi ý tên chuẩn, mô tả, danh mục và đơn vị. Tối đa 5 món; vượt giới hạn yêu cầu chia nhỏ, không âm thầm bỏ món thứ sáu.
+4. Backend kiểm tra kết quả và đối chiếu từng gợi ý với sản phẩm trong đúng cửa hàng; trả `matchedProducts` đã lọc dữ liệu theo quyền.
+5. Người dùng sửa và áp dụng từng thẻ; ứng viên tên gần giống cần xác nhận. Nếu tạo mới thì cần `PRODUCT_CREATE`, mở form và lưu qua API sản phẩm; việc gọi chuẩn hóa tự nó không tạo hàng.
 
-| Tham số | Giá trị | Ghi chú |
-|---|---|---|
-| Thời gian sống | 2 giờ không hoạt động | Hết hạn → mobile tự tạo phiên mới |
-| Số lượt / phiên | 30 câu hỏi | Quá giới hạn → yêu cầu bắt đầu cuộc trò chuyện mới |
-| Phiên / người dùng | 5 | Phiên cũ nhất bị loại |
-| Đồng thời | 1 yêu cầu / phiên | Yêu cầu thứ hai trả 409 |
-| Tần suất | 20 câu hỏi / 5 phút / người | Kiểm soát chi phí, trả 429 |
+Không suy đoán giá, barcode hoặc quy cách còn thiếu. Confidence là tự đánh giá của model, không phải bằng chứng đúng. Không tự đổi đơn vị của sản phẩm đã có khi áp dụng gợi ý.
 
-Phiên lưu trong RAM: khởi động lại server sẽ mất phiên (mobile nhận 404 và tự bắt đầu lại).
-Đây là đánh đổi có chủ ý: lịch sử chứa thinking block, không cần lưu lâu dài.
+### 5.2. Nhận diện ảnh sản phẩm
 
-### 4.3 Khi chạm giới hạn vòng lặp
+1. Người dùng chụp/chọn ảnh → `POST /uploads/image` → nhận URL ảnh thuộc cửa hàng.
+2. App gửi URL và ghi chú tùy chọn đến `POST /ai/scan-image`.
+3. Backend kiểm tra quyền/đường dẫn, đọc ảnh rồi gọi Gemini; kiểm tra cấu trúc kết quả và đối chiếu barcode/tên/quy cách với hàng hiện có.
+4. App hiển thị gợi ý và ứng viên để người dùng chọn. Dùng sản phẩm sẵn có hoặc mở form tạo mới nếu đủ quyền; chưa có thao tác thay đổi tồn tại bước nhận diện.
 
-Ở vòng thứ `MAX_TOOL_ROUNDS`, backend **nối thêm** một đoạn text sau các `tool_result`:
-"Đã đạt giới hạn tra cứu, hãy trả lời bằng thông tin hiện có". Cách này không sửa lịch sử,
-và model sẽ kết thúc bằng câu trả lời.
+Quét barcode/QR thông thường là tra mã qua backend, không cần Gemini. Ảnh mờ hoặc không đủ thông tin phải được kiểm tra lại bằng chụp lại/nhập tay.
 
----
+### 5.3. Đọc phiếu nhập
 
-## 5. Bộ công cụ (tools)
+1. ADMIN/MANAGER upload ảnh và gọi `POST /ai/scan-invoice`, cần cả quyền AI và nhập kho.
+2. Gemini trích các dòng hàng; backend đối chiếu để trả danh sách `candidates` theo cửa hàng. App có thể chọn sẵn ứng viên đầu, nhưng người dùng vẫn phải kiểm tra từng dòng.
+3. Người dùng đối chiếu sản phẩm, đơn vị tồn và số lượng với phiếu; không tự quy đổi “thùng” thành “chai”. Dòng chưa rõ phải sửa trước khi nhập.
+4. Khi xác nhận, app gọi `POST /inventory/batch` với `type: IMPORT`; backend kiểm tra lại tất cả dòng, quyền và sản phẩm. Tối đa 200 dòng, không trùng sản phẩm.
+5. API kho cập nhật tồn, ghi lịch sử và cảnh báo theo nghiệp vụ rồi commit MongoDB. AI đọc phiếu không tự cập nhật giá sản phẩm hoặc tạo giao dịch.
 
-Mọi công cụ chạy với `storeId` lấy từ JWT. **Model không thể chỉ định cửa hàng.** Danh sách
-công cụ được lọc theo quyền của người dùng khi tạo phiên, và quyền được kiểm tra lại khi chạy.
+Batch đã chuyển mã sang MongoDB transaction; kiểm chứng đồng thời và rollback trên replica set thật còn chờ môi trường.
 
-| Công cụ | Đầu vào | Quyền | Kết quả |
-|---|---|---|---|
-| `search_products` | `query`, `category?`, `low_stock_only?`, `limit?` (≤ 20) | Xem sản phẩm | Danh sách rút gọn (id, tên, barcode, tồn, giá...) |
-| `get_product` | `product_id?` hoặc `barcode?` | Xem sản phẩm | Chi tiết + 5 giao dịch gần nhất |
-| `list_low_stock` | (không) | Xem sản phẩm | Hàng sắp hết / hết hàng |
-| `list_transactions` | `product_id?`, `type?`, `days?`, `limit?` | Xem sản phẩm | Lịch sử nhập/xuất/kiểm kê |
-| `get_inventory_summary` | `days?` | Xem báo cáo | Tổng nhập/xuất, giá trị tồn, top xuất |
-| `propose_stock_movement` | `product_id`, `type`, `quantity`, `reason?` | Nhập / Xuất / Kiểm kê (theo `type`) | **Thẻ đề xuất**, chưa ghi dữ liệu |
-| `propose_new_product` | `name`, `category?`, `unit?`, `price?`, `cost_price?`, `barcode?`, `description?` | Tạo sản phẩm | **Thẻ đề xuất** mở form tạo sản phẩm |
+### 5.4. Chat tra cứu và thống kê
 
-Giá nhập (`cost_price`) chỉ trả về cho người có quyền xem báo cáo hoặc tạo sản phẩm
-(giảm thiểu lộ dữ liệu kinh doanh cho nhân viên).
+| Tool | Phạm vi | Quyền tool |
+| --- | --- | --- |
+| `search_products` | Tra tên, danh mục, tồn và barcode | `PRODUCT_VIEW` |
+| `get_product` | Chi tiết sản phẩm và 5 giao dịch gần nhất | `PRODUCT_VIEW` |
+| `list_low_stock` | Hàng thấp hơn hoặc bằng ngưỡng | `PRODUCT_VIEW` |
+| `list_transactions` | Lịch sử theo sản phẩm/loại/khoảng ngày | `PRODUCT_VIEW` |
+| `get_inventory_summary` | Tổng hợp tồn, nhập/xuất, giá trị và top xuất | `REPORT_VIEW` |
+| `propose_stock_movement` | Tạo thẻ nhập/xuất/kiểm kê, chưa ghi | Quyền kho tương ứng `type` |
+| `propose_new_product` | Tạo thẻ mở form thêm hàng, chưa ghi | `PRODUCT_CREATE` |
 
-### Thẻ đề xuất (action card)
+Không có tool cập nhật quyền hoặc xóa sản phẩm. Báo cáo doanh thu hiện lấy lượng xuất nhân giá bán hiện tại; câu trả lời phải được hiểu là ước tính theo cách tính của service, không phải sổ kế toán hoặc doanh thu snapshot.
 
-Sau khi API kho lưu thành công, app gọi
-`POST /ai/assistant/sessions/:id/actions/:actionId/confirm` với `transactionId`.
-Backend đối chiếu giao dịch thật: cùng cửa hàng, người thao tác, sản phẩm, loại, số lượng
-và thời điểm; chỉ nhận action do chính phiên phát hành. Endpoint chỉ nối sự kiện đã xác
-minh vào ngữ cảnh, không gọi model, không ghi kho và không tăng số lượt chat. Gửi lại cùng
-bằng chứng không ghi trùng. Nếu đồng bộ thất bại, UI vẫn báo giao dịch đã lưu và hướng dẫn
-hỏi lại số tồn; không tự retry nhập/xuất. Khi trả lời tồn, model vẫn phải gọi công cụ đọc kho.
+### 5.5. Chat đề xuất thao tác kho và xác nhận
 
-App bỏ response chat cũ sau khi reset và khóa gửi bằng ref để tránh bấm nhanh gửi trùng.
-Offline không nhớ ngữ cảnh câu trước; câu kiểu “xuất thêm 2 cái đó” được yêu cầu nói rõ tên.
-
-```json
-{ "id": "act-...", "kind": "STOCK_MOVEMENT", "productId": "product-1", "productName": "Coca-Cola 390ml",
-  "unit": "chai", "type": "EXPORT", "quantity": 3, "reason": "Bán lẻ", "currentQuantity": 24 }
+```mermaid
+sequenceDiagram
+    participant U as Người dùng
+    participant A as App
+    participant C as Trợ lý và tools
+    participant K as API kho
+    U->>A: Yêu cầu nhập / xuất / kiểm kê
+    A->>C: Chat
+    C-->>A: Thẻ đề xuất, chưa ghi kho
+    U->>A: Xem và bấm Xác nhận
+    A->>K: POST /inventory/movement
+    K->>K: Kiểm quyền và tồn hiện tại, ghi lịch sử, lưu JSON
+    K-->>A: Sản phẩm và transactionId đã lưu
+    A->>C: Confirm action bằng transactionId
+    C->>C: Đối chiếu giao dịch và cập nhật ngữ cảnh
+    C-->>A: confirmed
 ```
 
-Mobile hiển thị thẻ với nút **Xác nhận** → gọi `POST /inventory/movement` như thao tác tay
-→ backend kiểm tra quyền + tồn kho lần nữa. Thẻ `CREATE_PRODUCT` mở form tạo sản phẩm đã
-điền sẵn để người dùng xem lại rồi lưu.
+- `IMPORT`/`EXPORT`: quantity nguyên dương. `EXPORT` không vượt tồn; kiểm tra lại ở API kho vì tồn trên thẻ có thể đã cũ.
+- `ADJUSTMENT`: quantity là số thực đếm nguyên không âm, bắt buộc lý do. Ví dụ tồn 120, đếm 113: đề xuất quantity 113; lịch sử ghi chênh lệch -7. Không yêu cầu phiên phê duyệt riêng.
+- Tool tạo thẻ và kiểm tra quyền theo loại; người dùng có thể sửa qua màn nghiệp vụ hoặc bỏ qua. Bỏ qua không ghi kho.
+- Sau lưu, app gọi `POST /ai/assistant/sessions/:id/actions/:actionId/confirm`. Backend kiểm tra action thuộc phiên, giao dịch cùng cửa hàng/người thao tác/sản phẩm/loại/số lượng và thời gian phù hợp.
+- Confirm chỉ đồng bộ ngữ cảnh, không gọi model, không tăng lượt chat và không ghi kho. Gửi lại cùng bằng chứng được chấp nhận; không phải cơ chế idempotency của `/inventory/movement`.
+- Nếu đồng bộ trợ lý thất bại sau lưu, thông báo “giao dịch đã lưu” và hướng dẫn hỏi lại số tồn; không tự gửi lại nhập/xuất. Khóa nút trong app không bảo đảm chống lặp ở mọi tình huống mất mạng.
 
----
+### 5.6. Chat đề xuất tạo sản phẩm
 
-## 6. An toàn và quyền riêng tư
+Tra trước khi đề xuất. Barcode đã có cần dùng sản phẩm sẵn có; tên gần giống hiện cảnh báo để đối chiếu. `CREATE_PRODUCT` mở `ProductFormScreen` với dữ liệu điền sẵn, người dùng xem rồi gọi `POST /products`. Mở form không đồng nghĩa đã tạo. Sản phẩm lưu thành công có tồn 0 và cần nhập riêng nếu muốn tăng tồn.
 
-| Rủi ro | Biện pháp |
-|---|---|
-| AI tự ý thay đổi tồn kho | Không có công cụ ghi; chỉ có `propose_*`; người dùng phải bấm xác nhận |
-| Vượt quyền (nhân viên nhập kho qua AI) | Lọc tools theo quyền, kiểm tra lại khi chạy tool, kiểm tra lần ba ở API nghiệp vụ |
-| Lộ dữ liệu cửa hàng khác | Tool luôn dùng `storeId` từ JWT; không có tham số cửa hàng |
-| Prompt injection (mô tả sản phẩm chứa lệnh) | System prompt nêu rõ dữ liệu từ công cụ là *dữ liệu*, không phải chỉ thị; AI không có quyền ghi |
-| Lộ API key | Key chỉ ở backend; mobile gọi qua JWT |
-| Chi phí tăng đột biến | Rate limit theo người dùng, giới hạn lượt/phiên, `effort: low`, prompt caching |
-| Bộ lọc an toàn từ chối nhầm | `fallbacks: "default"`; nếu vẫn từ chối thì trả lời lịch sự, không lỗi |
-| AI bịa số liệu | Prompt yêu cầu chỉ dùng số liệu từ công cụ, nói rõ khi không tìm thấy |
+## 6. Lỗi và thao tác tiếp theo
 
----
+Thiếu `GEMINI_API_KEY` hoặc provider lỗi: trả lỗi và giữ khả năng thao tác thủ công; không tự chuyển Claude/offline hoặc trả dữ liệu heuristic như kết quả Gemini. `/ai/status` chỉ phản ánh cấu hình, không xác nhận key/model/quota thực sự sử dụng được.
 
-## 7. Chế độ offline (không có API key)
+App giữ dữ liệu nhập và ảnh để sửa/thử lại; không áp dụng response cũ khi người dùng đã đổi input/reset. Hết quota hoặc giới hạn tần suất cần thông báo đúng loại khi có căn cứ; không coi mọi 429 là hết quota ngày. Timeout, JSON không hợp lệ, kết quả bị chặn hoặc chưa hoàn tất phải báo lỗi, không áp dụng dữ liệu dở.
 
-`OfflineAssistant` nhận diện ý định bằng từ khóa tiếng Việt (bỏ dấu) và gọi cùng bộ công cụ:
+Lỗi API nghiệp vụ xử lý theo kết quả thực tế. Nếu không biết chắc giao dịch đã lưu sau mất kết nối, kiểm tra lịch sử/tồn trước khi thao tác lại; hệ thống hiện chưa bảo đảm chống ghi lặp toàn cục.
 
-| Câu hỏi ví dụ | Ý định | Kết quả |
-|---|---|---|
-| "hàng nào sắp hết", "cần nhập gì" | `low_stock` | Danh sách sắp hết |
-| "tổng quan", "báo cáo tuần", "doanh thu" | `summary` | Số liệu tổng hợp (cần quyền báo cáo) |
-| "giao dịch gần đây", "lịch sử xuất" | `transactions` | 5 giao dịch gần nhất |
-| "xuất 3 coca", "nhập 10 mì hảo hảo" | `movement` | Thẻ đề xuất nhập/xuất |
-| "coca còn bao nhiêu", "giá sữa" | `product` | Tìm sản phẩm theo tên |
-| khác | `help` | Hướng dẫn những gì trợ lý làm được |
+## 7. File phụ trách
 
-Phản hồi có cùng định dạng với chế độ Claude, nên mobile không cần phân biệt.
+| File/thư mục | Trách nhiệm |
+| --- | --- |
+| `Server/backend/src/ai/ai.controller.ts` | Endpoint AI, quyền và đối chiếu sản phẩm |
+| `src/ai/ai.service.ts`, `gemini-product-vision.ts`, `gemini-errors.ts` trong backend | Chuẩn hóa/vision, validation kết quả và ánh xạ lỗi Gemini |
+| `src/ai/assistant/assistant.service.ts` | Prompt, vòng gọi hàm và xác nhận giao dịch |
+| `src/ai/assistant/assistant-tools.ts` | Tools, kiểm quyền, trình bày dữ liệu và tạo đề xuất |
+| `src/ai/assistant/assistant-session.store.ts` | Phiên RAM, khóa, TTL và rate limit |
+| `src/products/`, `src/inventory/`, `src/notifications/`, `src/database/` trong backend | Nghiệp vụ thật và lưu trữ |
+| `App/InventorySupport/src/screens/ai/` | Chat, chuẩn hóa và ActionCard |
+| `App/InventorySupport/src/screens/scanner/` | Quét mã/ảnh/phiếu và bước người dùng duyệt |
+| `App/InventorySupport/src/components/AiSuggestionCard.tsx` | Hiển thị/sửa gợi ý |
+| `App/InventorySupport/src/store/assistant.store.tsx` | Trạng thái hội thoại, reset và đồng bộ confirm |
+| `App/InventorySupport/src/services/ai.service.ts` | Gọi API AI |
 
----
+## 8. Tiêu chí kiểm chứng theo nghiệp vụ
 
-## 8. Hợp đồng API
+- STAFF không được đề xuất/lưu IMPORT hoặc ADJUSTMENT; VIEWER không gọi AI; ADMIN/MANAGER dùng theo quyền.
+- Tra cứu không trả sản phẩm/giao dịch khác cửa hàng; dữ liệu giá nhập trong kết quả AI được lọc theo quyền.
+- Chuẩn hóa nhiều món không tự lưu, không mất món vượt giới hạn, không bịa giá/barcode và không đổi đơn vị hàng cũ.
+- Phiếu nhập phải duyệt, không tự đổi đơn vị, không ghi trước xác nhận; batch lỗi không áp dụng một phần do validation.
+- Kiểm kê 0 hợp lệ khi có lý do; thiếu lý do bị chặn; số thực đếm và chênh lệch lịch sử đúng.
+- Thẻ kho tạo ra không thay đổi dữ liệu; xác nhận kiểm tồn lại; confirm lỗi sau lưu không ghi giao dịch lần hai.
+- Tạo sản phẩm qua thẻ cần mở form và lưu, tồn ban đầu bằng 0.
+- Lỗi Gemini không gây logout do nhầm lỗi provider với JWT, không giữ kết quả cũ như kết quả mới, không làm kẹt phiên.
+- Báo cáo phản ánh đúng công thức hiện tại, không tuyên bố giá lịch sử hoặc nghiệp vụ kế toán chưa có.
 
-### `POST /ai/assistant/chat` - quyền `AI_USE`
-
-```json
-// Request
-{ "sessionId": "asst-...", "message": "Hàng nào sắp hết?" }   // sessionId bỏ trống = phiên mới
-
-// Response 201
-{
-  "sessionId": "asst-...",
-  "provider": "claude" | "offline",
-  "reply": "Có 2 sản phẩm cần nhập thêm: ...",
-  "products": [ /* sản phẩm được nhắc tới, để hiển thị thẻ */ ],
-  "actions":  [ /* thẻ đề xuất */ ],
-  "toolCalls": [ { "name": "list_low_stock", "summary": "Tra hàng sắp hết" } ],
-  "turn": 1, "maxTurns": 30
-}
-```
-
-| Mã lỗi | Ý nghĩa | Mobile xử lý |
-|---|---|---|
-| 400 | Câu hỏi rỗng / quá 1000 ký tự / hết lượt của phiên | Hiện lỗi; hết lượt → nút "Cuộc trò chuyện mới" |
-| 404 | Phiên không tồn tại (hết hạn, server khởi động lại) | Tự gửi lại không kèm `sessionId` |
-| 409 | Phiên đang xử lý câu trước | Hiện "Đang trả lời câu trước" |
-| 429 | Vượt tần suất | Hiện thời gian chờ |
-| 503 | Lỗi nhà cung cấp AI | Hiện lỗi, cho thử lại |
-
-### `DELETE /ai/assistant/sessions/:id` - xóa phiên (nút "Cuộc trò chuyện mới")
-### `GET /ai/status` - `{ provider, assistant: { maxTurns, model } }`
-
----
-
-## 9. Giao diện mobile
-
-- **Màn Trợ lý AI** có hai chế độ: *Hỏi đáp* (chat) và *Chuẩn hóa* (như cũ).
-- Lịch sử chat giữ trong `AssistantProvider` (tồn tại suốt phiên đăng nhập, xóa khi đăng xuất).
-- Gợi ý nhanh (chip): "Hàng nào sắp hết?", "Tổng quan 7 ngày", "Giao dịch hôm nay"...
-  Chip thao tác chỉ hiện khi người dùng có quyền tương ứng.
-- Mỗi câu trả lời có thể kèm: thẻ sản phẩm (bấm để xem chi tiết), thẻ đề xuất
-  (Xác nhận / Chỉnh sửa / Bỏ qua), dòng nhỏ "Đã tra: ..." để minh bạch AI đã đọc gì.
-- Lối vào: thẻ "Hỏi trợ lý AI" ở Tổng quan, nút ở Tài khoản và ở màn Quét.
-
----
-
-## 10. Cấu hình và triển khai
-
-| Biến | Mặc định | Ý nghĩa |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | (trống → offline) | Bật Claude |
-| `AI_MODEL` | `claude-opus-5-5` | Model dùng cho mọi năng lực AI |
-| `AI_EFFORT` | `low` | `low` / `medium` / `high` cho trợ lý hỏi đáp |
-| `AI_RATE_LIMIT` | `20` | Số câu hỏi / 5 phút / người dùng |
-
-Các bước:
-
-1. Tạo API key tại Claude Console, đặt `ANTHROPIC_API_KEY` trên máy chạy backend.
-2. `npm run start:dev`, gọi `GET /ai/status` → `provider: "claude"`.
-3. Trên mobile mở *Trợ lý AI → Hỏi đáp*, hỏi thử "Hàng nào sắp hết?".
-
-Chi phí ước tính: một câu hỏi thường gồm 1-3 lần gọi model, mỗi lần khoảng 3-6K token
-đầu vào (phần lớn được cache) và vài trăm token đầu ra.
-
----
-
-## 11. Kiểm thử
-
-| Loại | Nội dung |
-|---|---|
-| Unit | Lọc tools theo vai trò; tool không đọc được dữ liệu cửa hàng khác; `propose_stock_movement` từ chối loại không có quyền và xuất vượt tồn; ý định của `OfflineAssistant` |
-| E2E | `POST /ai/assistant/chat` ở chế độ offline: hỏi hàng sắp hết, tạo thẻ xuất kho, nhân viên không nhận được thẻ nhập kho, xóa phiên, 404 với phiên lạ |
-| Thủ công (có key) | Hỏi nhiều lượt trong một phiên, xác nhận thẻ đề xuất, thử prompt injection trong mô tả sản phẩm |
-
----
-
-## 12. Giới hạn và hướng phát triển
-
-- Phiên trong RAM: chạy nhiều instance backend thì cần chuyển sang Redis.
-- Chưa stream câu trả lời từng chữ (cần SSE trên React Native).
-- Offline chỉ hiểu các mẫu câu phổ biến.
-- Có thể thêm: gợi ý số lượng nhập dựa trên tốc độ bán, trả lời bằng giọng nói.
-# Lưu ý về tài liệu
-
-Tài liệu bên dưới mô tả thiết kế Claude trước khi chuyển đổi. Xem [báo cáo Gemini](AI_GEMINI_MIGRATION_REPORT.md) để biết hướng dẫn hiện tại; các chi tiết Claude/offline bên dưới không mô tả luồng đang chạy.
-
+Kiểm thử dùng mock để tiết kiệm quota; ảnh/phiếu thật và APK cần nghiệm thu riêng. Lần cập nhật tài liệu này chưa chạy lại test hay gọi model thật. Tham khảo [báo cáo Gemini](AI_GEMINI_MIGRATION_REPORT.md), [luồng quét](SCAN.md) và [bộ ca chuẩn hóa](AI_NORMALIZATION_EVAL.md); các mô tả provider/fallback cũ trong tài liệu liên quan cần đối chiếu với mã hiện tại.

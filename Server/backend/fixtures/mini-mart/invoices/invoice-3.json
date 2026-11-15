@@ -1,0 +1,47 @@
+﻿{
+    "lines":  [
+                  {
+                      "barcode":  "DEMO000021",
+                      "unit":  "gói",
+                      "productId":  "product-demo-021",
+                      "quantity":  6,
+                      "name":  "Mì vị tôm An Nhiên 100g"
+                  },
+                  {
+                      "barcode":  "DEMO000022",
+                      "unit":  "gói",
+                      "productId":  "product-demo-022",
+                      "quantity":  8,
+                      "name":  "Mì vị bò An Nhiên 100g"
+                  },
+                  {
+                      "barcode":  "DEMO000023",
+                      "unit":  "gói",
+                      "productId":  "product-demo-023",
+                      "quantity":  10,
+                      "name":  "Miến gà An Nhiên 100g"
+                  },
+                  {
+                      "barcode":  "DEMO000024",
+                      "unit":  "gói",
+                      "productId":  "product-demo-024",
+                      "quantity":  12,
+                      "name":  "Bún khô An Nhiên 100g"
+                  },
+                  {
+                      "barcode":  "DEMO000025",
+                      "unit":  "gói",
+                      "productId":  "product-demo-025",
+                      "quantity":  14,
+                      "name":  "Phở khô An Nhiên 100g"
+                  },
+                  {
+                      "barcode":  "DEMO000026",
+                      "unit":  "gói",
+                      "productId":  "product-demo-026",
+                      "quantity":  16,
+                      "name":  "Cháo nấm An Nhiên 100g"
+                  }
+              ],
+    "number":  "PN003"
+}

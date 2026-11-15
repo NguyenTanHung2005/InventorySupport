@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/request.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { NotificationsService } from './notifications.service.js';
@@ -17,8 +26,10 @@ export class NotificationsController {
   }
 
   @Get('unread-count')
-  unreadCount(@Req() request: AuthenticatedRequest) {
-    return { unreadCount: this.notificationsService.unreadCount(request.user) };
+  async unreadCount(@Req() request: AuthenticatedRequest) {
+    return {
+      unreadCount: await this.notificationsService.unreadCount(request.user),
+    };
   }
 
   @Post('read-all')
@@ -27,8 +38,14 @@ export class NotificationsController {
   }
 
   @Post('push-token')
-  registerPushToken(@Req() request: AuthenticatedRequest, @Body() body: { token?: string }) {
-    return this.notificationsService.registerPushToken(request.user, body.token);
+  registerPushToken(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: { token?: string },
+  ) {
+    return this.notificationsService.registerPushToken(
+      request.user,
+      body.token,
+    );
   }
 
   @Post(':id/read')

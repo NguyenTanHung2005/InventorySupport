@@ -1,0 +1,842 @@
+[
+  {
+    "barcode": "8801073114814",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8801073114814",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/880/107/311/4814/front_en.177.400.jpg",
+    "modifiedAt": "2026-11-08T09:29:22.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "3250391232192",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/3250391232192",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/325/039/123/2192/front_fr.23.400.jpg",
+    "modifiedAt": "2026-08-27T13:42:03.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "9555030107614",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/9555030107614",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/955/503/010/7614/front_en.25.400.jpg",
+    "modifiedAt": "2026-09-27T05:04:01.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "11111221",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/11111221",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/000/001/111/1221/front_sk.11.400.jpg",
+    "modifiedAt": "2026-05-24T07:31:12.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8852756346053",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8852756346053",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/885/275/634/6053/front_en.58.400.jpg",
+    "modifiedAt": "2026-06-22T04:20:43.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8938506854846",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8938506854846",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/850/685/4846/front_en.4.400.jpg",
+    "modifiedAt": "2026-11-07T16:00:48.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934563138165",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934563138165",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/456/313/8165/front_vi.38.400.jpg",
+    "modifiedAt": "2026-03-24T02:25:54.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "0015000045203",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/0015000045203",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/001/500/004/5203/front_en.75.400.jpg",
+    "modifiedAt": "2026-11-04T23:54:56.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8801073115378",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8801073115378",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/880/107/311/5378/front_en.43.400.jpg",
+    "modifiedAt": "2026-11-05T10:18:51.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "7610400068529",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/7610400068529",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/761/040/006/8529/front_fr.3.400.jpg",
+    "modifiedAt": "2026-06-28T21:01:08.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "5908230521522",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/5908230521522",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/590/823/052/1522/front_en.5.400.jpg",
+    "modifiedAt": "2026-03-26T03:40:29.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934637011523",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934637011523",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/463/701/1523/front_vi.13.400.jpg",
+    "modifiedAt": "2026-09-23T16:37:16.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "0087614019666",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/0087614019666",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/008/761/401/9666/front_vi.3.400.jpg",
+    "modifiedAt": "2026-02-16T20:56:44.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "4018077712999",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/4018077712999",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/401/807/771/2999/front_en.22.400.jpg",
+    "modifiedAt": "2026-10-23T10:27:31.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934588063053",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934588063053",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/458/806/3053/front_vi.4.400.jpg",
+    "modifiedAt": "2025-04-03T08:41:23.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8000015003210",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8000015003210",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/800/001/500/3210/front_fr.27.400.jpg",
+    "modifiedAt": "2026-03-30T16:54:49.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935217400058",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935217400058",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/521/740/0058/front_en.39.400.jpg",
+    "modifiedAt": "2026-02-16T21:09:36.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935049501718",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935049501718",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/504/950/1718/front_vi.7.400.jpg",
+    "modifiedAt": "2023-07-30T22:57:52.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935049501503",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935049501503",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/504/950/1503/front_vi.7.400.jpg",
+    "modifiedAt": "2025-08-29T20:26:56.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "7622300442507",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/7622300442507",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/762/230/044/2507/front_en.56.400.jpg",
+    "modifiedAt": "2026-10-16T08:53:58.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8936193070075",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8936193070075",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/619/307/0075/front_en.3.400.jpg",
+    "modifiedAt": "2026-02-16T20:58:16.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8854761951383",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8854761951383",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/885/476/195/1383/front_en.49.400.jpg",
+    "modifiedAt": "2026-06-29T14:02:14.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934804025766",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934804025766",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/480/402/5766/front_vi.20.400.jpg",
+    "modifiedAt": "2024-10-11T00:23:29.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8936079562496",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8936079562496",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/607/956/2496/front_en.6.400.jpg",
+    "modifiedAt": "2026-03-26T06:25:49.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "0840093101105",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/0840093101105",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/084/009/310/1105/front_vi.5.400.jpg",
+    "modifiedAt": "2026-06-03T07:48:35.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8901071701389",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8901071701389",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/890/107/170/1389/front_fr.3.400.jpg",
+    "modifiedAt": "2025-08-21T08:20:07.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "0023964786056",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/0023964786056",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/002/396/478/6056/front_es.8.400.jpg",
+    "modifiedAt": "2026-06-03T07:49:09.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "0883204005923",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/0883204005923",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/088/320/400/5923/front_fr.23.400.jpg",
+    "modifiedAt": "2026-06-08T08:40:07.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8936093330576",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8936093330576",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/609/333/0576/front_en.5.400.jpg",
+    "modifiedAt": "2026-06-03T07:49:01.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934588183133",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934588183133",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/458/818/3133/front_fr.50.400.jpg",
+    "modifiedAt": "2025-08-13T19:26:14.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8936136161143",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8936136161143",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/613/616/1143/front_fr.3.400.jpg",
+    "modifiedAt": "2026-01-27T17:16:51.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934673900928",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934673900928",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/467/390/0928/front_en.4.400.jpg",
+    "modifiedAt": "2026-06-03T07:49:16.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935049511021",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935049511021",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/504/951/1021/front_vi.10.400.jpg",
+    "modifiedAt": "2025-08-13T19:59:45.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8936136163017",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8936136163017",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/613/616/3017/front_vi.3.400.jpg",
+    "modifiedAt": "2024-04-20T11:59:42.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8938504946123",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8938504946123",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/850/494/6123/front_en.3.400.jpg",
+    "modifiedAt": "2025-07-16T13:13:14.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935297103122",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935297103122",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/529/710/3122/front_fr.8.400.jpg",
+    "modifiedAt": "2025-01-22T09:23:25.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934588063176",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934588063176",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/458/806/3176/front_vi.3.400.jpg",
+    "modifiedAt": "2025-07-03T06:21:05.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8936127790017",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8936127790017",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/612/779/0017/front_vi.5.400.jpg",
+    "modifiedAt": "2026-06-03T07:48:43.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "6940188813181",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/6940188813181",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/694/018/881/3181/front_en.3.400.jpg",
+    "modifiedAt": "2025-01-24T03:37:34.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "4897036692257",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/4897036692257",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/489/703/669/2257/front_en.3.400.jpg",
+    "modifiedAt": "2025-09-06T17:09:56.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934673701778",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934673701778",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/467/370/1778/front_en.3.400.jpg",
+    "modifiedAt": "2025-06-03T18:47:21.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "80236485",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/80236485",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/000/008/023/6485/front_vi.3.400.jpg",
+    "modifiedAt": "2025-07-03T09:41:03.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935024123287",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935024123287",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/502/412/3287/front_fr.30.400.jpg",
+    "modifiedAt": "2026-05-18T21:01:11.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8996001320136",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8996001320136",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/899/600/132/0136/front_en.23.400.jpg",
+    "modifiedAt": "2026-08-26T02:05:57.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935217400324",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935217400324",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/521/740/0324/front_en.4.400.jpg",
+    "modifiedAt": "2026-08-26T02:06:05.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935024140147",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935024140147",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/502/414/0147/front_fr.3.400.jpg",
+    "modifiedAt": "2025-03-20T11:44:43.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8936017363505",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8936017363505",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/601/736/3505/front_fr.4.400.jpg",
+    "modifiedAt": "2026-03-16T11:59:03.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934804025780",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934804025780",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/480/402/5780/front_vi.10.400.jpg",
+    "modifiedAt": "2026-06-20T19:49:40.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "19345888",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/19345888",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/000/001/934/5888/front_fr.3.400.jpg",
+    "modifiedAt": "2019-10-30T11:44:07.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8691216097193",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8691216097193",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/869/121/609/7193/front_vi.13.400.jpg",
+    "modifiedAt": "2025-07-07T02:06:33.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935049501596",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935049501596",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/504/950/1596/front_en.10.400.jpg",
+    "modifiedAt": "2026-06-20T19:50:34.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935012413321",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935012413321",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/501/241/3321/front_vi.8.400.jpg",
+    "modifiedAt": "2025-01-29T15:25:33.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8001060031210",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8001060031210",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/800/106/003/1210/front_en.4.400.jpg",
+    "modifiedAt": "2026-02-08T10:37:41.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8935005800015",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8935005800015",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/500/580/0015/front_fr.3.400.jpg",
+    "modifiedAt": "2026-06-20T19:50:25.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8996001355046",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8996001355046",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/899/600/135/5046/front_en.7.400.jpg",
+    "modifiedAt": "2026-08-26T02:06:09.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934588172113",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934588172113",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/458/817/2113/front_en.14.400.jpg",
+    "modifiedAt": "2026-04-07T18:27:36.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8934588843051",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8934588843051",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/458/884/3051/front_en.13.400.jpg",
+    "modifiedAt": "2026-06-03T07:49:40.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8936036026375",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8936036026375",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/603/602/6375/front_en.5.400.jpg",
+    "modifiedAt": "2026-08-07T03:33:37.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8938507849094",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8938507849094",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/850/784/9094/front_en.10.400.jpg",
+    "modifiedAt": "2026-10-21T01:55:19.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  },
+  {
+    "barcode": "8932390012030",
+    "provider": "Open Food Facts",
+    "productUrl": "https://world.openfoodfacts.org/product/8932390012030",
+    "imageUrl": "https://images.openfoodfacts.org/images/products/893/239/001/2030/front_en.3.400.jpg",
+    "modifiedAt": "2026-06-20T19:50:07.000Z",
+    "licenses": {
+      "database": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "contents": "https://opendatacommons.org/licenses/dbcl/1-0/",
+      "images": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    "fetchedAt": "2026-11-15T16:47:06.134Z",
+    "businessFieldsOrigin": "Demo estimates; user requested sensible prices and units, not verified market data"
+  }
+]

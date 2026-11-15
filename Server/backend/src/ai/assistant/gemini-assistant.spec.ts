@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UserRole } from '../../common/types.js';
-import { DatabaseService } from '../../database/database.service.js';
+import { MemoryDatabase } from '../../../test/helpers/memory-database.js';
 import { InventoryService } from '../../inventory/inventory.service.js';
 import { NotificationsService } from '../../notifications/notifications.service.js';
 import { ProductsService } from '../../products/products.service.js';
@@ -11,7 +11,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe('Gemini assistant', () => {
   it('executes permitted tools and proposes a stock movement without saving it', async () => {
     vi.stubEnv('GEMINI_API_KEY', 'test-key');
-    const database = new DatabaseService();
+    const database = new MemoryDatabase();
     const products = new ProductsService(database);
     const inventory = new InventoryService(database, products, new NotificationsService(database));
     const service = new AssistantService(new AssistantSessionStore(), products, inventory);

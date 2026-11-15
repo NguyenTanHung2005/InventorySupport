@@ -1,0 +1,319 @@
+{
+  "version": 1,
+  "store": "Mini Mart An Nhiên",
+  "startDay": "2026-10-16",
+  "endDay": "2026-11-14",
+  "days": 30,
+  "users": 6,
+  "products": 60,
+  "transactions": 629,
+  "notifications": 15,
+  "images": [
+    {
+      "id": "product-demo-001",
+      "name": "Nước suối An Nhiên 500ml",
+      "file": "images/product-demo-001.png"
+    },
+    {
+      "id": "product-demo-002",
+      "name": "Trà xanh An Nhiên 500ml",
+      "file": "images/product-demo-002.png"
+    },
+    {
+      "id": "product-demo-003",
+      "name": "Trà đào An Nhiên 500ml",
+      "file": "images/product-demo-003.png"
+    },
+    {
+      "id": "product-demo-004",
+      "name": "Nước cam An Nhiên 500ml",
+      "file": "images/product-demo-004.png"
+    },
+    {
+      "id": "product-demo-005",
+      "name": "Nước chanh An Nhiên 500ml",
+      "file": "images/product-demo-005.png"
+    },
+    {
+      "id": "product-demo-006",
+      "name": "Soda An Nhiên 500ml",
+      "file": "images/product-demo-006.png"
+    },
+    {
+      "id": "product-demo-007",
+      "name": "Nước táo An Nhiên 500ml",
+      "file": "images/product-demo-007.png"
+    },
+    {
+      "id": "product-demo-008",
+      "name": "Trà ô long An Nhiên 500ml",
+      "file": "images/product-demo-008.png"
+    },
+    {
+      "id": "product-demo-009",
+      "name": "Nước dừa An Nhiên 500ml",
+      "file": "images/product-demo-009.png"
+    },
+    {
+      "id": "product-demo-010",
+      "name": "Nước khoáng An Nhiên 500ml",
+      "file": "images/product-demo-010.png"
+    },
+    {
+      "id": "product-demo-011",
+      "name": "Sữa tươi có đường An Nhiên 180ml",
+      "file": "images/product-demo-011.png"
+    },
+    {
+      "id": "product-demo-012",
+      "name": "Sữa tươi không đường An Nhiên 180ml",
+      "file": "images/product-demo-012.png"
+    },
+    {
+      "id": "product-demo-013",
+      "name": "Sữa dâu An Nhiên 180ml",
+      "file": "images/product-demo-013.png"
+    },
+    {
+      "id": "product-demo-014",
+      "name": "Sữa socola An Nhiên 180ml",
+      "file": "images/product-demo-014.png"
+    },
+    {
+      "id": "product-demo-015",
+      "name": "Sữa đậu nành An Nhiên 180ml",
+      "file": "images/product-demo-015.png"
+    },
+    {
+      "id": "product-demo-016",
+      "name": "Sữa yến mạch An Nhiên 180ml",
+      "file": "images/product-demo-016.png"
+    },
+    {
+      "id": "product-demo-017",
+      "name": "Sữa gạo An Nhiên 180ml",
+      "file": "images/product-demo-017.png"
+    },
+    {
+      "id": "product-demo-018",
+      "name": "Sữa bắp An Nhiên 180ml",
+      "file": "images/product-demo-018.png"
+    },
+    {
+      "id": "product-demo-019",
+      "name": "Sữa hạt sen An Nhiên 180ml",
+      "file": "images/product-demo-019.png"
+    },
+    {
+      "id": "product-demo-020",
+      "name": "Sữa hạnh nhân An Nhiên 180ml",
+      "file": "images/product-demo-020.png"
+    },
+    {
+      "id": "product-demo-021",
+      "name": "Mì vị tôm An Nhiên 100g",
+      "file": "images/product-demo-021.png"
+    },
+    {
+      "id": "product-demo-022",
+      "name": "Mì vị bò An Nhiên 100g",
+      "file": "images/product-demo-022.png"
+    },
+    {
+      "id": "product-demo-023",
+      "name": "Miến gà An Nhiên 100g",
+      "file": "images/product-demo-023.png"
+    },
+    {
+      "id": "product-demo-024",
+      "name": "Bún khô An Nhiên 100g",
+      "file": "images/product-demo-024.png"
+    },
+    {
+      "id": "product-demo-025",
+      "name": "Phở khô An Nhiên 100g",
+      "file": "images/product-demo-025.png"
+    },
+    {
+      "id": "product-demo-026",
+      "name": "Cháo nấm An Nhiên 100g",
+      "file": "images/product-demo-026.png"
+    },
+    {
+      "id": "product-demo-027",
+      "name": "Nui xoắn An Nhiên 100g",
+      "file": "images/product-demo-027.png"
+    },
+    {
+      "id": "product-demo-028",
+      "name": "Mì trứng An Nhiên 100g",
+      "file": "images/product-demo-028.png"
+    },
+    {
+      "id": "product-demo-029",
+      "name": "Bánh đa An Nhiên 100g",
+      "file": "images/product-demo-029.png"
+    },
+    {
+      "id": "product-demo-030",
+      "name": "Miến dong An Nhiên 100g",
+      "file": "images/product-demo-030.png"
+    },
+    {
+      "id": "product-demo-031",
+      "name": "Bánh quy bơ An Nhiên 150g",
+      "file": "images/product-demo-031.png"
+    },
+    {
+      "id": "product-demo-032",
+      "name": "Bánh quy cacao An Nhiên 150g",
+      "file": "images/product-demo-032.png"
+    },
+    {
+      "id": "product-demo-033",
+      "name": "Bánh gạo An Nhiên 150g",
+      "file": "images/product-demo-033.png"
+    },
+    {
+      "id": "product-demo-034",
+      "name": "Bánh xốp vani An Nhiên 150g",
+      "file": "images/product-demo-034.png"
+    },
+    {
+      "id": "product-demo-035",
+      "name": "Kẹo trái cây An Nhiên 150g",
+      "file": "images/product-demo-035.png"
+    },
+    {
+      "id": "product-demo-036",
+      "name": "Kẹo bạc hà An Nhiên 150g",
+      "file": "images/product-demo-036.png"
+    },
+    {
+      "id": "product-demo-037",
+      "name": "Bánh yến mạch An Nhiên 150g",
+      "file": "images/product-demo-037.png"
+    },
+    {
+      "id": "product-demo-038",
+      "name": "Bánh mè An Nhiên 150g",
+      "file": "images/product-demo-038.png"
+    },
+    {
+      "id": "product-demo-039",
+      "name": "Kẹo sữa An Nhiên 150g",
+      "file": "images/product-demo-039.png"
+    },
+    {
+      "id": "product-demo-040",
+      "name": "Bánh khoai An Nhiên 150g",
+      "file": "images/product-demo-040.png"
+    },
+    {
+      "id": "product-demo-041",
+      "name": "Muối tinh An Nhiên 250g",
+      "file": "images/product-demo-041.png"
+    },
+    {
+      "id": "product-demo-042",
+      "name": "Đường trắng An Nhiên 250g",
+      "file": "images/product-demo-042.png"
+    },
+    {
+      "id": "product-demo-043",
+      "name": "Bột canh An Nhiên 250g",
+      "file": "images/product-demo-043.png"
+    },
+    {
+      "id": "product-demo-044",
+      "name": "Hạt nêm nấm An Nhiên 250g",
+      "file": "images/product-demo-044.png"
+    },
+    {
+      "id": "product-demo-045",
+      "name": "Tiêu xay An Nhiên 250g",
+      "file": "images/product-demo-045.png"
+    },
+    {
+      "id": "product-demo-046",
+      "name": "Bột nghệ An Nhiên 250g",
+      "file": "images/product-demo-046.png"
+    },
+    {
+      "id": "product-demo-047",
+      "name": "Bột ớt An Nhiên 250g",
+      "file": "images/product-demo-047.png"
+    },
+    {
+      "id": "product-demo-048",
+      "name": "Đường nâu An Nhiên 250g",
+      "file": "images/product-demo-048.png"
+    },
+    {
+      "id": "product-demo-049",
+      "name": "Muối tiêu An Nhiên 250g",
+      "file": "images/product-demo-049.png"
+    },
+    {
+      "id": "product-demo-050",
+      "name": "Bột tỏi An Nhiên 250g",
+      "file": "images/product-demo-050.png"
+    },
+    {
+      "id": "product-demo-051",
+      "name": "Nước rửa chén An Nhiên 750ml",
+      "file": "images/product-demo-051.png"
+    },
+    {
+      "id": "product-demo-052",
+      "name": "Nước giặt An Nhiên 750ml",
+      "file": "images/product-demo-052.png"
+    },
+    {
+      "id": "product-demo-053",
+      "name": "Nước lau sàn An Nhiên 750ml",
+      "file": "images/product-demo-053.png"
+    },
+    {
+      "id": "product-demo-054",
+      "name": "Nước rửa tay An Nhiên 750ml",
+      "file": "images/product-demo-054.png"
+    },
+    {
+      "id": "product-demo-055",
+      "name": "Nước xả vải An Nhiên 750ml",
+      "file": "images/product-demo-055.png"
+    },
+    {
+      "id": "product-demo-056",
+      "name": "Nước lau kính An Nhiên 750ml",
+      "file": "images/product-demo-056.png"
+    },
+    {
+      "id": "product-demo-057",
+      "name": "Dung dịch vệ sinh bếp An Nhiên 750ml",
+      "file": "images/product-demo-057.png"
+    },
+    {
+      "id": "product-demo-058",
+      "name": "Nước giặt đồ trẻ em An Nhiên 750ml",
+      "file": "images/product-demo-058.png"
+    },
+    {
+      "id": "product-demo-059",
+      "name": "Nước rửa rau An Nhiên 750ml",
+      "file": "images/product-demo-059.png"
+    },
+    {
+      "id": "product-demo-060",
+      "name": "Nước vệ sinh nhà tắm An Nhiên 750ml",
+      "file": "images/product-demo-060.png"
+    }
+  ],
+  "invoices": [
+    "invoices/invoice-1.png",
+    "invoices/invoice-2.png",
+    "invoices/invoice-3.png"
+  ],
+  "source": "Ảnh minh họa nguyên gốc, tạo bằng generate-demo-images.ps1"
+}

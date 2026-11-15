@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+﻿import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service.js';
 import {
   AppNotification,
@@ -8,121 +13,142 @@ import {
   UserRole,
 } from '../common/types.js';
 import { paginate, parsePageQuery } from '../common/validation.js';
-
-const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-/** Vai trò nhận cảnh báo tồn kho. */
 const ALERT_ROLES = [UserRole.ADMIN, UserRole.MANAGER];
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-
   constructor(private readonly database: DatabaseService) {}
 
-  /**
-   * Gọi sau mỗi lần tồn kho thay đổi. Chỉ tạo cảnh báo khi tồn kho vừa
-   * "vượt ngưỡng" xuống dưới minStock (hoặc về 0), tránh spam mỗi lần xuất.
-   */
-  onStockChanged(product: Product, quantityBefore: number): AppNotification | undefined {
-    const wasLow = quantityBefore <= product.minStock;
-    const isLow = product.quantity <= product.minStock;
-    const becameEmpty = quantityBefore > 0 && product.quantity === 0;
-    if (!becameEmpty && (wasLow || !isLow)) return undefined;
-
-    const type = product.quantity === 0 ? NotificationType.OUT_OF_STOCK : NotificationType.LOW_STOCK;
-    const notification: AppNotification = {
+  async onStockChanged(
+    product: Product,
+    before: number,
+  ): Promise<AppNotification | undefined> {
+    const empty = before > 0 && product.quantity === 0;
+    if (
+      !empty &&
+      (before <= product.minStock || product.quantity > product.minStock)
+    )
+      return undefined;
+    const type =
+      product.quantity === 0
+        ? NotificationType.OUT_OF_STOCK
+        : NotificationType.LOW_STOCK;
+    return this.database.insert('notifications', {
       id: this.database.createId('notification'),
       storeId: product.storeId,
-      type,
       productId: product.id,
-      title: type === NotificationType.OUT_OF_STOCK ? 'Hết hàng' : 'Sắp hết hàng',
+      type,
+      title:
+        type === NotificationType.OUT_OF_STOCK ? 'Hết hàng' : 'Sắp hết hàng',
       message:
         type === NotificationType.OUT_OF_STOCK
           ? `${product.name} đã hết hàng. Cần nhập thêm.`
           : `${product.name} chỉ còn ${product.quantity} ${product.unit} (tối thiểu ${product.minStock}).`,
       readBy: [],
-      createdAt: new Date().toISOString(),
-    };
-    this.database.notifications.push(notification);
-    void this.sendPush(notification);
-    return notification;
+      createdAt: product.updatedAt,
+    });
   }
-
-  list(user: AuthUser, query: { page?: string; limit?: string; unreadOnly?: string }) {
-    const items = this.storeNotifications(user)
-      .filter((item) => query.unreadOnly !== 'true' || !item.readBy.includes(user.id))
+  async list(
+    user: AuthUser,
+    query: { page?: string; limit?: string; unreadOnly?: string },
+  ) {
+    const all = await this.storeNotifications(user);
+    const items = all
+      .filter(
+        (item) => query.unreadOnly !== 'true' || !item.readBy.includes(user.id),
+      )
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((item) => this.present(item, user));
-    return { ...paginate(items, parsePageQuery(query)), unreadCount: this.unreadCount(user) };
+    return {
+      ...paginate(items, parsePageQuery(query)),
+      unreadCount: all.filter((item) => !item.readBy.includes(user.id)).length,
+    };
   }
-
-  unreadCount(user: AuthUser): number {
-    return this.storeNotifications(user).filter((item) => !item.readBy.includes(user.id)).length;
+  async unreadCount(user: AuthUser): Promise<number> {
+    return (await this.storeNotifications(user)).filter(
+      (item) => !item.readBy.includes(user.id),
+    ).length;
   }
-
-  markRead(user: AuthUser, id: string) {
-    const notification = this.storeNotifications(user).find((item) => item.id === id);
-    if (!notification) throw new NotFoundException('Không tìm thấy thông báo');
-    if (!notification.readBy.includes(user.id)) notification.readBy.push(user.id);
-    this.database.save();
-    return this.present(notification, user);
+  async markRead(user: AuthUser, id: string) {
+    if (!ALERT_ROLES.includes(user.role))
+      throw new NotFoundException('Không tìm thấy thông báo');
+    const item = await this.database.update(
+      'notifications',
+      { _id: id, storeId: user.storeId },
+      { $addToSet: { readBy: user.id } },
+    );
+    if (!item) throw new NotFoundException('Không tìm thấy thông báo');
+    return this.present(item, user);
   }
-
-  markAllRead(user: AuthUser) {
-    for (const notification of this.storeNotifications(user)) {
-      if (!notification.readBy.includes(user.id)) notification.readBy.push(user.id);
-    }
-    this.database.save();
+  async markAllRead(user: AuthUser) {
+    for (const item of await this.storeNotifications(user))
+      await this.markRead(user, item.id);
     return { unreadCount: 0 };
   }
-
-  registerPushToken(user: AuthUser, token: unknown) {
-    if (typeof token !== 'string' || !/^Expo(nent)?PushToken\[.+\]$/.test(token)) {
+  async registerPushToken(user: AuthUser, token: unknown) {
+    if (
+      typeof token !== 'string' ||
+      !/^Expo(nent)?PushToken\[.+\]$/.test(token)
+    )
       throw new BadRequestException('Expo push token không hợp lệ');
-    }
-    // Một thiết bị chỉ thuộc về một tài khoản tại một thời điểm.
-    for (const other of this.database.users) {
-      other.pushTokens = other.pushTokens.filter((existing) => existing !== token);
-    }
-    const stored = this.database.users.find((candidate) => candidate.id === user.id);
-    stored?.pushTokens.push(token);
-    this.database.save();
+    await this.database.transaction(async (db) => {
+      for (const other of await db.find('users', { pushTokens: token })) {
+        await db.update(
+          'users',
+          { _id: other.id },
+          { $pull: { pushTokens: token } },
+        );
+      }
+      await db.update(
+        'users',
+        { _id: user.id },
+        { $addToSet: { pushTokens: token } },
+      );
+    });
     return { registered: true };
   }
-
-  /** Thông báo chỉ dành cho người có quyền nhận cảnh báo kho. */
-  private storeNotifications(user: AuthUser) {
-    if (!ALERT_ROLES.includes(user.role)) return [];
-    return this.database.notifications.filter((item) => item.storeId === user.storeId);
+  private async storeNotifications(user: AuthUser) {
+    return ALERT_ROLES.includes(user.role)
+      ? this.database.find('notifications', { storeId: user.storeId })
+      : [];
   }
-
-  private present(notification: AppNotification, user: AuthUser) {
-    const { readBy, ...rest } = notification;
+  private present(item: AppNotification, user: AuthUser) {
+    const { readBy, ...rest } = item;
     return { ...rest, read: readBy.includes(user.id) };
   }
-
-  private async sendPush(notification: AppNotification) {
-    const tokens = this.database.users
-      .filter((user) => user.storeId === notification.storeId && user.active && ALERT_ROLES.includes(user.role))
-      .flatMap((user) => user.pushTokens);
-    if (!tokens.length || process.env.VITEST) return;
+  async sendPush(notification: AppNotification): Promise<void> {
     try {
-      const response = await fetch(EXPO_PUSH_URL, {
+      const users = await this.database.find('users', {
+        storeId: notification.storeId,
+        active: true,
+        role: { $in: ALERT_ROLES },
+      });
+      const tokens = users.flatMap((user) => user.pushTokens);
+      if (!tokens.length || process.env.VITEST) return;
+      const response = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
         body: JSON.stringify(
           tokens.map((to) => ({
             to,
             title: notification.title,
             body: notification.message,
             sound: 'default',
-            data: { productId: notification.productId, notificationId: notification.id },
+            data: {
+              productId: notification.productId,
+              notificationId: notification.id,
+            },
           })),
         ),
+        signal: AbortSignal.timeout(10000),
       });
-      if (!response.ok) this.logger.warn(`Expo push lỗi ${response.status}: ${await response.text()}`);
-    } catch (error) {
-      this.logger.warn(`Không gửi được push notification: ${(error as Error).message}`);
+      if (!response.ok) this.logger.warn(`Expo push lỗi ${response.status}`);
+    } catch {
+      this.logger.warn('Không gửi được push notification; giao dịch đã lưu');
     }
   }
 }

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/request.js';
 import { Permission } from '../common/permissions.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -33,13 +41,19 @@ export class InventoryController {
 
   @Get('transactions')
   @RequirePermissions(Permission.PRODUCT_VIEW)
-  transactions(@Req() request: AuthenticatedRequest, @Query() query: TransactionQuery) {
+  transactions(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: TransactionQuery,
+  ) {
     return this.inventoryService.transactions(request.user, query);
   }
 
   @Get('summary')
   @RequirePermissions(Permission.PRODUCT_VIEW)
-  summary(@Req() request: AuthenticatedRequest, @Query() query: Pick<TransactionQuery, 'from' | 'to'>) {
+  summary(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: Pick<TransactionQuery, 'from' | 'to'>,
+  ) {
     return this.inventoryService.summary(request.user, query);
   }
 }

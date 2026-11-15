@@ -28,14 +28,21 @@ export function toPublicUser(user: StoredUser): PublicUser {
 export class AuthService {
   constructor(private readonly database: DatabaseService) {}
 
-  login(dto: LoginDto) {
-    const email = String(dto.email ?? '').trim().toLowerCase();
-    const user = this.database.users.find((candidate) => candidate.email === email);
-    if (!user || !verifyPassword(String(dto.password ?? ''), user.passwordHash)) {
+  async login(dto: LoginDto) {
+    const email = String(dto.email ?? '')
+      .trim()
+      .toLowerCase();
+    const user = await this.database.get('users', { email });
+    if (
+      !user ||
+      !verifyPassword(String(dto.password ?? ''), user.passwordHash)
+    ) {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
     }
     if (!user.active) {
-      throw new UnauthorizedException('Tài khoản đang chờ quản trị viên kích hoạt hoặc đã bị khóa');
+      throw new UnauthorizedException(
+        'Tài khoản đang chờ quản trị viên kích hoạt hoặc đã bị khóa',
+      );
     }
     return this.issueToken(user);
   }
@@ -45,11 +52,11 @@ export class AuthService {
    * Quản trị viên phải kích hoạt (và có thể đổi vai trò) trong màn hình quản lý tài khoản,
    * tránh việc người lạ tự đăng ký rồi xem được dữ liệu kinh doanh.
    */
-  register(dto: RegisterDto) {
+  async register(dto: RegisterDto) {
     const name = requiredString(dto.name, 'Họ tên', 80);
     const email = requiredEmail(dto.email);
     const password = requiredPassword(dto.password);
-    if (this.database.users.some((user) => user.email === email)) {
+    if (await this.database.get('users', { email })) {
       throw new ConflictException('Email đã được sử dụng');
     }
     const now = new Date().toISOString();
@@ -65,32 +72,39 @@ export class AuthService {
       createdAt: now,
       updatedAt: now,
     };
-    this.database.users.push(user);
-    this.database.save();
+    await this.database.insert('users', user);
     return {
-      message: 'Đăng ký thành công. Vui lòng chờ quản trị viên kích hoạt tài khoản.',
+      message:
+        'Đăng ký thành công. Vui lòng chờ quản trị viên kích hoạt tài khoản.',
       user: toPublicUser(user),
     };
   }
 
-  me(authUser: AuthUser) {
-    const user = this.findStored(authUser.id);
-    return { user: toPublicUser(user), permissions: ROLE_PERMISSIONS[user.role] };
+  async me(authUser: AuthUser) {
+    const user = await this.findStored(authUser.id);
+    return {
+      user: toPublicUser(user),
+      permissions: ROLE_PERMISSIONS[user.role],
+    };
   }
 
-  changePassword(authUser: AuthUser, dto: ChangePasswordDto) {
-    const user = this.findStored(authUser.id);
+  async changePassword(authUser: AuthUser, dto: ChangePasswordDto) {
+    const user = await this.findStored(authUser.id);
     if (!verifyPassword(String(dto.currentPassword ?? ''), user.passwordHash)) {
       throw new BadRequestException('Mật khẩu hiện tại không đúng');
     }
     user.passwordHash = hashPassword(requiredPassword(dto.newPassword));
     user.updatedAt = new Date().toISOString();
-    this.database.save();
+    await this.database.update(
+      'users',
+      { _id: user.id },
+      { $set: { passwordHash: user.passwordHash, updatedAt: user.updatedAt } },
+    );
     return { message: 'Đã đổi mật khẩu' };
   }
 
-  private findStored(id: string): StoredUser {
-    const user = this.database.users.find((candidate) => candidate.id === id);
+  private async findStored(id: string): Promise<StoredUser> {
+    const user = await this.database.get('users', { _id: id });
     if (!user) throw new UnauthorizedException('Tài khoản không tồn tại');
     return user;
   }

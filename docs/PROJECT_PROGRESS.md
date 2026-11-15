@@ -1,24 +1,38 @@
-﻿# Mốc tiến độ dự án
+﻿# Mốc tiến độ Inventory Support
 
-Cập nhật: 15/11/2026. Mốc này được tổng hợp từ trạng thái Git và tài liệu trong workspace; không thay thế kết quả chạy kiểm thử mới.
+Cập nhật 15/11/2026. Nhánh `feature/gemini-migration`, HEAD lúc bắt đầu triển khai MongoDB: `348fef7` (tích hợp gemini AI). Thay đổi hiện chưa commit; không hoàn tác các tài liệu có sẵn.
 
-## Trạng thái hiện tại
+## Phạm vi đã được người dùng duyệt
 
-- Dự án Inventory Support gồm app React Native/Expo tại `App/InventorySupport` và backend NestJS tại `Server/backend`.
-- Nhánh hiện tại: `feature/gemini-migration`; commit gần nhất: `b2604f8` (`fixServer`). Có nhiều thay đổi và file mới chưa commit, bao gồm cả hai package-lock; cần giữ nguyên và kiểm tra diff trước khi sửa, commit hoặc hoàn tác.
-- Theo `docs/AI_GEMINI_MIGRATION_REPORT.md`, các luồng AI chính đã được chuyển sang Gemini: chuẩn hóa sản phẩm, nhận diện ảnh sản phẩm/phiếu nhập và trợ lý. Backend xử lý quyền và dữ liệu kho; người dùng duyệt đề xuất trước khi ghi.
-- Workspace cũng có thay đổi liên quan phiên đăng nhập, giao diện gợi ý AI, quét ảnh, sản phẩm và kiểm thử. Không suy diễn mọi thay đổi đã hoàn tất chỉ từ danh sách file.
+Backend máy tính cùng Wi-Fi, Atlas Free, ảnh local, bộ mẫu siêu thị mini 30 ngày; không chuyển JSON cũ. Người dùng hoãn toàn bộ build/cấu hình APK. Spec: `docs/superpowers/specs/2026-11-15-atlas-lan-mini-mart-design.md`; kế hoạch thực hiện: `docs/superpowers/plans/2026-11-15-atlas-lan-implementation.md`.
 
-## Bằng chứng và việc còn lại
+## Mã và tài nguyên đã chuẩn bị
 
-- Báo cáo Gemini ghi nhận backend build và lint đạt, 80 unit test và 22 API test đạt với dữ liệu giả, sau đó thêm một test quota đạt; app đạt TypeScript và ESLint. Đây là kết quả được tài liệu ghi lại, chưa chạy lại trong lần cập nhật này.
-- Chưa xác nhận kết nối, quota hoặc chất lượng Gemini bằng tài khoản/model thật. Checklist nghiệm thu trong báo cáo vẫn có nhiều ca chưa chạy, bao gồm ảnh/phiếu thực, một số lỗi AI và kiểm tra quyền.
-- `docs/AI_NORMALIZATION_EVAL.md` chứa bộ ca đánh giá model thật và bằng chứng của giai đoạn trước; một số mô tả fallback/provider trong tài liệu đó có thể không còn khớp với hướng Gemini hiện tại. Đối chiếu mã và báo cáo Gemini trước khi dùng làm tiêu chí.
-- Bước tiếp theo: xem diff và tài liệu liên quan để xác định phạm vi công việc tiếp theo; chạy kiểm thử phù hợp sau khi thay đổi. Khi cần nghiệm thu tích hợp thật, dùng key hợp lệ và số request tối thiểu; không đưa key vào repo hoặc chat.
+- Thay DatabaseService mảng/JSON bằng truy vấn MongoDB có ánh xạ ID, schema/index, kiểm URI và chờ index lúc startup. Khai báo @nestjs/mongoose và mongoose trong package.json.
+- Chuyển auth guard, auth/users/products/inventory/notifications và caller AI sang async; kho ghi tồn/lịch sử/cảnh báo trong transaction, push sau commit.
+- Bảo vệ cập nhật tài khoản theo trường yêu cầu, quản trị viên cuối cùng bằng shared revision lock, token thiết bị một chủ bằng unique multikey index; xóa ảnh dùng $unset.
+- Fixture đủ 60 sản phẩm,6 tài khoản,629 giao dịch,15 cảnh báo trong 16/10–14/11/2026; 60 PNG sản phẩm và3 PNG phiếu kèm đáp án. Có script seed/check; không tự xóa/reset/migrate dữ liệu cũ.
+- Hướng dẫn người dùng: `docs/MONGODB_LOCAL_SETUP.md`, `docs/DEMO_DATA.md`.
 
-## Tài liệu liên quan
+## Bằng chứng kiểm tra lần này
 
-- `docs/AI_GEMINI_MIGRATION_REPORT.md`: thiết kế, cấu hình, kết quả và checklist chuyển đổi.
-- `docs/AI_ASSISTANT.md`, `docs/SCAN.md`: luồng trợ lý và quét.
-- `docs/AI_NORMALIZATION_EVAL.md`: bộ ca đánh giá chuẩn hóa.
-- `AGENT.md`: quy tắc dự án, ưu tiên mock để tiết kiệm quota.
+- 96 unit/fixture tests đạt;7 Mongo integration tests bỏ qua vì thiếu MONGODB_TEST_URI/deployment.
+- 22 HTTP contract tests đạt với fixture database riêng cho test; không coi đây là bằng chứng Mongo isolation.
+- App TypeScript đạt; lint app lỗi dependency `expo-secure-store` chưa có trong node_modules (không sửa app trong tác vụ này).
+- Backend lint không có error,1 warning unbound-method trong integration test. Format và git diff --check đạt.
+- Build backend thất bại3 lỗi missing modules mongoose/@nestjs/mongoose. Registry npm bị môi trường chặn (ENOTCACHED/ECONNREFUSED); chưa cài dependency hoặc cập nhật package-lock. Cần npm install trên môi trường truy cập npm được rồi build và chạy Mongo integration.
+- Đã rà soát độc lập toàn thay đổi và sửa source cho5 vấn đề Important. Các kiểm thử không cần Mongo cho lỗi cập nhật tài khoản/xóa ảnh/startup đã quan sát RED->GREEN; concurrency trên Mongo chưa chạy.
+- Đã sửa minor confirmAction: kiểm tra busy sau khi chờ truy vấn giao dịch, trước khi thay đổi ngữ cảnh. Test tái hiện chat bắt đầu trong lúc lookup chờ đã quan sát RED→GREEN; xác nhận lại sau khi chat kết thúc thành công mà không ghi lại kho.
+
+## Bước tiếp theo
+
+1. Người dùng setup Atlas theo hướng dẫn, giữ URI/key trên backend; chạy npm install để cập nhật lockfile.
+2. Chạy build, lint, test và test Mongo replica set bằng user test riêng, sửa nếu integration phát hiện vấn đề. Không tuyên bố runtime đã sẵn sàng khi bước này chưa qua.
+3. Seed database demo trống, check:demo, chạy backend và thử app cùng Wi-Fi/ảnh.
+4. Gemini thật, Expo push thật, LAN trên điện thoại và APK chưa nghiệm thu. Build APK sẽ bàn sau.
+
+Ledger chi tiết (local, không commit): `.superpowers/sdd/2026-11-15-atlas-lan-implementation/progress.md`.
+
+- Điều chỉnh theo yêu cầu mới: script seed/check và hướng dẫn dùng database inventory_support (hoặc inventory_support_<suffix>), thay inventory_support_demo; vẫn từ chối seed khi collection có dữ liệu.
+
+- 15/11/2026: người dùng yêu cầu áp dụng dữ liệu cào và tự bổ sung giá/đơn vị. Đã tạo backend/fixtures/crawled-products (60 sản phẩm+ảnh+nguồn), thêm ScrawlData/prepare-backend.mjs và apply-backend.mjs. Đã gọi API backend local tạo60 sản phẩm và upload ảnh vào UPLOAD_DIR thực. Kiểm chứng60 trường/60 URL ảnh, tồn mới0; tổng120 sản phẩm vì giữ60 cũ. Chạy lại tạo0/bỏ qua60. Giá/đơn vị/nhà cung cấp mô phỏng, không phải giá được xác minh. Không sửa lịch sử, tồn cũ hoặc tài khoản. 9 test scraper/import offline đạt.

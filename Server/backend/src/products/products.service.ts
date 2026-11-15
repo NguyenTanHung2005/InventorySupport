@@ -16,8 +16,17 @@ import {
 } from '../common/validation.js';
 import QRCode from 'qrcode';
 import { isOwnUploadPath } from '../uploads/upload-paths.js';
-import { buildProductQrPayload, numericVariants, parseScanCode, type ParsedScanCode } from './scan-code.js';
-import { CreateProductDto, ProductQuery, UpdateProductDto } from './dto/create-product.dto.js';
+import {
+  buildProductQrPayload,
+  numericVariants,
+  parseScanCode,
+  type ParsedScanCode,
+} from './scan-code.js';
+import {
+  CreateProductDto,
+  ProductQuery,
+  UpdateProductDto,
+} from './dto/create-product.dto.js';
 
 /** Bỏ dấu tiếng Việt để tìm kiếm "mi hao hao" vẫn ra "Mì Hảo Hảo". */
 export function searchKey(value: string): string {
@@ -35,43 +44,57 @@ export class ProductsService {
   constructor(private readonly database: DatabaseService) {}
 
   /** Sản phẩm còn hoạt động (chưa xóa) của cửa hàng. */
-  active(user: AuthUser): Product[] {
-    return this.database.products.filter(
-      (product) => product.storeId === user.storeId && !product.deletedAt,
-    );
+  async active(user: AuthUser): Promise<Product[]> {
+    return this.database.find('products', {
+      storeId: user.storeId,
+      deletedAt: { $exists: false },
+    });
   }
 
-  list(user: AuthUser, query: ProductQuery) {
+  async list(user: AuthUser, query: ProductQuery) {
     const search = query.search ? searchKey(query.search) : '';
-    const items = this.active(user)
-      .filter((product) => !query.category || product.category === query.category)
-      .filter((product) => query.lowStock !== 'true' || product.quantity <= product.minStock)
+    const items = (await this.active(user))
+      .filter(
+        (product) => !query.category || product.category === query.category,
+      )
+      .filter(
+        (product) =>
+          query.lowStock !== 'true' || product.quantity <= product.minStock,
+      )
       .filter((product) => {
         if (!search) return true;
-        return searchKey(`${product.name} ${product.barcode} ${product.category} ${product.supplier}`).includes(search);
+        return searchKey(
+          `${product.name} ${product.barcode} ${product.category} ${product.supplier}`,
+        ).includes(search);
       })
       .sort((a, b) => {
         if (query.sort === 'quantity') return a.quantity - b.quantity;
-        if (query.sort === 'updatedAt') return b.updatedAt.localeCompare(a.updatedAt);
+        if (query.sort === 'updatedAt')
+          return b.updatedAt.localeCompare(a.updatedAt);
         return a.name.localeCompare(b.name, 'vi');
       });
     return paginate(items, parsePageQuery(query));
   }
 
-  categories(user: AuthUser): string[] {
-    return [...new Set(this.active(user).map((product) => product.category))].sort((a, b) =>
-      a.localeCompare(b, 'vi'),
-    );
+  async categories(user: AuthUser): Promise<string[]> {
+    return [
+      ...new Set((await this.active(user)).map((product) => product.category)),
+    ].sort((a, b) => a.localeCompare(b, 'vi'));
   }
 
-  findById(id: string, user: AuthUser): Product {
-    const product = this.active(user).find((candidate) => candidate.id === id);
+  async findById(id: string, user: AuthUser): Promise<Product> {
+    const product = (await this.active(user)).find(
+      (candidate) => candidate.id === id,
+    );
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
     return product;
   }
 
-  findByBarcode(barcode: string, user: AuthUser): Product {
-    const product = this.findByCandidates(user, numericVariants(barcode.trim()));
+  async findByBarcode(barcode: string, user: AuthUser): Promise<Product> {
+    const product = await this.findByCandidates(
+      user,
+      numericVariants(barcode.trim()),
+    );
     if (!product) throw new NotFoundException('Mã barcode chưa tồn tại');
     return product;
   }
@@ -80,17 +103,27 @@ export class ProductsService {
    * Phân tích chuỗi quét (mã vạch, tem QR của app, GS1 Digital Link...) rồi tìm sản phẩm.
    * Không ném 404 khi không thấy: "chưa có" là một kết quả hợp lệ của việc quét.
    */
-  resolve(raw: string, user: AuthUser): ParsedScanCode & { product: Product | null } {
+  async resolve(
+    raw: string,
+    user: AuthUser,
+  ): Promise<ParsedScanCode & { product: Product | null }> {
     if (!raw?.trim()) throw new BadRequestException('Thiếu mã cần tra');
     const parsed = parseScanCode(raw);
-    return { ...parsed, product: this.findByCandidates(user, parsed.candidates) ?? null };
+    return {
+      ...parsed,
+      product: (await this.findByCandidates(user, parsed.candidates)) ?? null,
+    };
   }
 
   /** Dữ liệu tem QR để in dán lên kệ/sản phẩm (docs/SCAN.md mục 2.4). */
   async label(id: string, user: AuthUser) {
-    const product = this.findById(id, user);
+    const product = await this.findById(id, user);
     const payload = buildProductQrPayload(product.barcode);
-    const qrDataUrl = await QRCode.toDataURL(payload, { errorCorrectionLevel: 'M', margin: 1, width: 360 });
+    const qrDataUrl = await QRCode.toDataURL(payload, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 360,
+    });
     return {
       productId: product.id,
       name: product.name,
@@ -102,8 +135,11 @@ export class ProductsService {
     };
   }
 
-  private findByCandidates(user: AuthUser, candidates: string[]): Product | undefined {
-    const products = this.active(user);
+  private async findByCandidates(
+    user: AuthUser,
+    candidates: string[],
+  ): Promise<Product | undefined> {
+    const products = await this.active(user);
     for (const code of candidates) {
       const product = products.find((candidate) => candidate.barcode === code);
       if (product) return product;
@@ -112,15 +148,25 @@ export class ProductsService {
   }
 
   /** Tìm sản phẩm có sẵn khớp với gợi ý của AI (theo barcode hoặc tên). */
-  match(user: AuthUser, hint: { barcode?: string; name: string }): Product[] {
-    const products = this.active(user);
+  async match(
+    user: AuthUser,
+    hint: { barcode?: string; name: string },
+  ): Promise<Product[]> {
+    const products = await this.active(user);
     if (hint.barcode) {
-      const exact = this.findByCandidates(user, numericVariants(hint.barcode));
+      const exact = await this.findByCandidates(
+        user,
+        numericVariants(hint.barcode),
+      );
       if (exact) return [exact];
     }
-    const words = searchKey(hint.name).split(/\s+/).filter((word) => word.length > 1);
+    const words = searchKey(hint.name)
+      .split(/\s+/)
+      .filter((word) => word.length > 1);
     const size = (name: string) => {
-      const found = /(\d+(?:[.,]\d+)?)\s*(ml|lit|l|kg|g)\b/.exec(searchKey(name));
+      const found = /(\d+(?:[.,]\d+)?)\s*(ml|lit|l|kg|g)\b/.exec(
+        searchKey(name),
+      );
       if (!found) return undefined;
       const amount = Number(found[1].replace(',', '.'));
       return `${amount * (['l', 'lit', 'kg'].includes(found[2]) ? 1000 : 1)}${['kg', 'g'].includes(found[2]) ? 'g' : 'ml'}`;
@@ -128,12 +174,28 @@ export class ProductsService {
     const wantedSize = size(hint.name);
     if (!words.length) return [];
     return products
-      .filter((product) => !wantedSize || !size(product.name) || size(product.name) === wantedSize)
+      .filter(
+        (product) =>
+          !wantedSize ||
+          !size(product.name) ||
+          size(product.name) === wantedSize,
+      )
       .map((product) => {
         const key = searchKey(`${product.name} ${product.normalizedName}`);
-        const productWords = searchKey(product.name).split(/\s+/).filter((word) => word.length > 1);
-        const reverseScore = productWords.length ? productWords.filter((word) => searchKey(hint.name).includes(word)).length / productWords.length : 0;
-        return { product, score: Math.max(words.filter((word) => key.includes(word)).length / words.length, reverseScore) };
+        const productWords = searchKey(product.name)
+          .split(/\s+/)
+          .filter((word) => word.length > 1);
+        const reverseScore = productWords.length
+          ? productWords.filter((word) => searchKey(hint.name).includes(word))
+              .length / productWords.length
+          : 0;
+        return {
+          product,
+          score: Math.max(
+            words.filter((word) => key.includes(word)).length / words.length,
+            reverseScore,
+          ),
+        };
       })
       .filter(({ score }) => score >= 0.5)
       .sort((a, b) => b.score - a.score)
@@ -142,17 +204,20 @@ export class ProductsService {
   }
 
   /** Ứng viên AI chỉ trả giá nhập cho vai trò được xem. */
-  matchPublic(user: AuthUser, hint: { barcode?: string; name: string }) {
-    return this.match(user, hint).map(({ costPrice, ...product }) => (
-      hasPermission(user.role, Permission.REPORT_VIEW) || hasPermission(user.role, Permission.PRODUCT_CREATE)
-        ? { ...product, costPrice } : product
-    ));
+  async matchPublic(user: AuthUser, hint: { barcode?: string; name: string }) {
+    return (await this.match(user, hint)).map(({ costPrice, ...product }) =>
+      hasPermission(user.role, Permission.REPORT_VIEW) ||
+      hasPermission(user.role, Permission.PRODUCT_CREATE)
+        ? { ...product, costPrice }
+        : product,
+    );
   }
 
-  create(dto: CreateProductDto, user: AuthUser): Product {
+  async create(dto: CreateProductDto, user: AuthUser): Promise<Product> {
     const name = requiredString(dto.name, 'Tên sản phẩm');
-    const barcode = optionalString(dto.barcode, 'Barcode', 64) || this.generateCode();
-    this.ensureUniqueBarcode(user, barcode);
+    const barcode =
+      optionalString(dto.barcode, 'Barcode', 64) || this.generateCode();
+    await this.ensureUniqueBarcode(user, barcode);
     const now = new Date().toISOString();
     const product: Product = {
       id: this.database.createId('product'),
@@ -166,55 +231,109 @@ export class ProductsService {
       price: optionalNumber(dto.price, 'Giá bán') ?? 0,
       costPrice: optionalNumber(dto.costPrice, 'Giá nhập') ?? 0,
       supplier: optionalString(dto.supplier, 'Nhà cung cấp', 120) ?? '',
-      minStock: optionalNumber(dto.minStock, 'Tồn tối thiểu', { integer: true }) ?? 0,
+      minStock:
+        optionalNumber(dto.minStock, 'Tồn tối thiểu', { integer: true }) ?? 0,
       imageUrl: this.checkImage(user, dto.imageUrl),
       quantity: 0,
       createdAt: now,
       updatedAt: now,
     };
-    this.database.products.push(product);
-    this.database.save();
+    await this.database.insert('products', product);
     return product;
   }
 
-  update(id: string, dto: UpdateProductDto, user: AuthUser): Product {
-    const product = this.findById(id, user);
+  async update(
+    id: string,
+    dto: UpdateProductDto,
+    user: AuthUser,
+  ): Promise<Product> {
+    const product = await this.findById(id, user);
     if (dto.barcode !== undefined) {
       const barcode = requiredString(dto.barcode, 'Barcode', 64);
-      if (barcode !== product.barcode) this.ensureUniqueBarcode(user, barcode);
+      if (barcode !== product.barcode)
+        await this.ensureUniqueBarcode(user, barcode);
       product.barcode = barcode;
     }
     if (dto.name !== undefined) {
       product.name = requiredString(dto.name, 'Tên sản phẩm');
       product.normalizedName = product.name;
     }
-    if (dto.description !== undefined) product.description = optionalString(dto.description, 'Mô tả') ?? '';
-    if (dto.category !== undefined) product.category = optionalString(dto.category, 'Danh mục', 80) || 'Khác';
-    if (dto.unit !== undefined) product.unit = optionalString(dto.unit, 'Đơn vị', 30) || 'cái';
-    if (dto.supplier !== undefined) product.supplier = optionalString(dto.supplier, 'Nhà cung cấp', 120) ?? '';
-    if (dto.price !== undefined) product.price = optionalNumber(dto.price, 'Giá bán') ?? 0;
-    if (dto.costPrice !== undefined) product.costPrice = optionalNumber(dto.costPrice, 'Giá nhập') ?? 0;
+    if (dto.description !== undefined)
+      product.description = optionalString(dto.description, 'Mô tả') ?? '';
+    if (dto.category !== undefined)
+      product.category = optionalString(dto.category, 'Danh mục', 80) || 'Khác';
+    if (dto.unit !== undefined)
+      product.unit = optionalString(dto.unit, 'Đơn vị', 30) || 'cái';
+    if (dto.supplier !== undefined)
+      product.supplier =
+        optionalString(dto.supplier, 'Nhà cung cấp', 120) ?? '';
+    if (dto.price !== undefined)
+      product.price = optionalNumber(dto.price, 'Giá bán') ?? 0;
+    if (dto.costPrice !== undefined)
+      product.costPrice = optionalNumber(dto.costPrice, 'Giá nhập') ?? 0;
     if (dto.minStock !== undefined) {
-      product.minStock = optionalNumber(dto.minStock, 'Tồn tối thiểu', { integer: true }) ?? 0;
+      product.minStock =
+        optionalNumber(dto.minStock, 'Tồn tối thiểu', { integer: true }) ?? 0;
     }
-    if (dto.imageUrl !== undefined) product.imageUrl = this.checkImage(user, dto.imageUrl);
+    if (dto.imageUrl !== undefined)
+      product.imageUrl = this.checkImage(user, dto.imageUrl);
     product.updatedAt = new Date().toISOString();
-    this.database.save();
-    return product;
+    const editable = [
+      'barcode',
+      'name',
+      'description',
+      'category',
+      'unit',
+      'supplier',
+      'price',
+      'costPrice',
+      'minStock',
+      'imageUrl',
+    ] as const;
+    const fields: Record<string, unknown> = {
+      ...Object.fromEntries(
+        editable
+          .filter((key) => dto[key] !== undefined)
+          .map((key) => [key, product[key]]),
+      ),
+      updatedAt: product.updatedAt,
+      ...(dto.name !== undefined
+        ? { normalizedName: product.normalizedName }
+        : {}),
+    };
+    if (dto.imageUrl !== undefined && !product.imageUrl) delete fields.imageUrl;
+    const updated = await this.database.update(
+      'products',
+      { _id: product.id, storeId: user.storeId, deletedAt: { $exists: false } },
+      {
+        $set: fields,
+        ...(dto.imageUrl !== undefined && !product.imageUrl
+          ? { $unset: { imageUrl: 1 } }
+          : {}),
+      },
+    );
+    if (!updated) throw new NotFoundException('Không tìm thấy sản phẩm');
+    return updated;
   }
 
   /** Xóa mềm: sản phẩm biến mất khỏi danh sách nhưng lịch sử giao dịch vẫn còn. */
-  remove(id: string, user: AuthUser) {
-    const product = this.findById(id, user);
+  async remove(id: string, user: AuthUser) {
+    const product = await this.findById(id, user);
     product.deletedAt = new Date().toISOString();
     // Giải phóng barcode để có thể tạo lại sản phẩm cùng mã.
     product.barcode = `${product.barcode}#deleted-${Date.now()}`;
-    this.database.save();
+    await this.database.update(
+      'products',
+      { _id: product.id, storeId: user.storeId },
+      { $set: { barcode: product.barcode, deletedAt: product.deletedAt } },
+    );
     return { id: product.id, deleted: true };
   }
 
-  private ensureUniqueBarcode(user: AuthUser, barcode: string) {
-    if (this.active(user).some((product) => product.barcode === barcode)) {
+  private async ensureUniqueBarcode(user: AuthUser, barcode: string) {
+    if (
+      (await this.active(user)).some((product) => product.barcode === barcode)
+    ) {
       throw new ConflictException('Barcode đã tồn tại trong cửa hàng');
     }
   }
@@ -223,7 +342,9 @@ export class ProductsService {
     const value = imageUrl?.trim();
     if (!value) return undefined;
     if (!isOwnUploadPath(value, user.storeId)) {
-      throw new BadRequestException('Ảnh sản phẩm phải được tải lên qua /uploads/image');
+      throw new BadRequestException(
+        'Ảnh sản phẩm phải được tải lên qua /uploads/image',
+      );
     }
     return value;
   }

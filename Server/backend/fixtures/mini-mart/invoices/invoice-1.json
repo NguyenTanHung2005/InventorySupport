@@ -1,0 +1,47 @@
+﻿{
+    "lines":  [
+                  {
+                      "barcode":  "DEMO000001",
+                      "unit":  "chai",
+                      "productId":  "product-demo-001",
+                      "quantity":  6,
+                      "name":  "Nước suối An Nhiên 500ml"
+                  },
+                  {
+                      "barcode":  "DEMO000002",
+                      "unit":  "chai",
+                      "productId":  "product-demo-002",
+                      "quantity":  8,
+                      "name":  "Trà xanh An Nhiên 500ml"
+                  },
+                  {
+                      "barcode":  "DEMO000003",
+                      "unit":  "chai",
+                      "productId":  "product-demo-003",
+                      "quantity":  10,
+                      "name":  "Trà đào An Nhiên 500ml"
+                  },
+                  {
+                      "barcode":  "DEMO000004",
+                      "unit":  "chai",
+                      "productId":  "product-demo-004",
+                      "quantity":  12,
+                      "name":  "Nước cam An Nhiên 500ml"
+                  },
+                  {
+                      "barcode":  "DEMO000005",
+                      "unit":  "chai",
+                      "productId":  "product-demo-005",
+                      "quantity":  14,
+                      "name":  "Nước chanh An Nhiên 500ml"
+                  },
+                  {
+                      "barcode":  "DEMO000006",
+                      "unit":  "chai",
+                      "productId":  "product-demo-006",
+                      "quantity":  16,
+                      "name":  "Soda An Nhiên 500ml"
+                  }
+              ],
+    "number":  "PN001"
+}

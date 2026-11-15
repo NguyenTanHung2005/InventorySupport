@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthUser, StockTransactionType, UserRole } from '../../common/types.js';
-import { DatabaseService } from '../../database/database.service.js';
+import { MemoryDatabase } from '../../../test/helpers/memory-database.js';
 import { InventoryService } from '../../inventory/inventory.service.js';
 import { NotificationsService } from '../../notifications/notifications.service.js';
 import { ProductsService } from '../../products/products.service.js';
@@ -18,7 +18,7 @@ const user = (role: UserRole, storeId = 'store-1'): AuthUser => ({
 });
 
 function setup() {
-  const database = new DatabaseService();
+  const database = new MemoryDatabase();
   const products = new ProductsService(database);
   const inventory = new InventoryService(database, products, new NotificationsService(database));
   const store = new AssistantSessionStore();
@@ -27,17 +27,17 @@ function setup() {
 }
 
 describe('assistant tools', () => {
-  it('shows candidates but allows a reviewed distinct variant, while rejecting a duplicate barcode', () => {
+  it('shows candidates but allows a reviewed distinct variant, while rejecting a duplicate barcode', async () => {
     const { products, inventory } = setup();
     const ctx = new ToolRunContext(user(UserRole.MANAGER), products, inventory);
-    const result = JSON.parse(runTool('propose_new_product', { name: 'Coca-Cola Zero 390ml', barcode: '8930000000001' }, ctx).content);
+    const result = JSON.parse((await runTool('propose_new_product', { name: 'Coca-Cola Zero 390ml', barcode: '8930000000001' }, ctx)).content);
     expect(result.proposed).toBe(true);
     expect(ctx.actions[0]).toMatchObject({ kind: 'CREATE_PRODUCT', warning: expect.stringMatching(/có sẵn/), prefill: { name: 'Coca-Cola Zero 390ml' } });
     expect(ctx.products.has('product-1')).toBe(true);
-    const duplicate = runTool('propose_new_product', { name: 'Tên khác', barcode: '08934588012345' }, ctx);
+    const duplicate = (await runTool('propose_new_product', { name: 'Tên khác', barcode: '08934588012345' }, ctx));
     expect(duplicate.isError).toBe(true);
   });
-  it('filters tools by role', () => {
+  it('filters tools by role', async () => {
     const names = (role: UserRole) => toolsForUser(user(role)).map((tool) => tool.name);
     expect(names(UserRole.MANAGER)).toContain('propose_new_product');
     expect(names(UserRole.STAFF)).toContain('propose_stock_movement');
@@ -46,37 +46,37 @@ describe('assistant tools', () => {
     expect(names(UserRole.VIEWER)).not.toContain('propose_stock_movement');
   });
 
-  it('never reads another store and hides cost price from staff', () => {
+  it('never reads another store and hides cost price from staff', async () => {
     const { products, inventory } = setup();
     const otherStore = new ToolRunContext(user(UserRole.ADMIN, 'store-2'), products, inventory);
-    expect(JSON.parse(runTool('search_products', { query: '' }, otherStore).content).total).toBe(0);
+    expect(JSON.parse((await runTool('search_products', { query: '' }, otherStore)).content).total).toBe(0);
 
     const staff = new ToolRunContext(user(UserRole.STAFF), products, inventory);
-    const result = JSON.parse(runTool('search_products', { query: 'coca' }, staff).content);
+    const result = JSON.parse((await runTool('search_products', { query: 'coca' }, staff)).content);
     expect(result.items[0].name).toBe('Coca-Cola 390ml');
     expect(result.items[0].costPrice).toBeUndefined();
   });
 
-  it('only proposes stock movements the user may perform, without writing data', () => {
+  it('only proposes stock movements the user may perform, without writing data', async () => {
     const { products, inventory, database } = setup();
     const staff = new ToolRunContext(user(UserRole.STAFF), products, inventory);
 
-    const importAttempt = JSON.parse(runTool('propose_stock_movement', { product_id: 'product-1', type: 'IMPORT', quantity: 5 }, staff).content);
+    const importAttempt = JSON.parse((await runTool('propose_stock_movement', { product_id: 'product-1', type: 'IMPORT', quantity: 5 }, staff)).content);
     expect(importAttempt.error).toMatch(/không có quyền/);
 
-    const tooMany = JSON.parse(runTool('propose_stock_movement', { product_id: 'product-1', type: 'EXPORT', quantity: 999 }, staff).content);
+    const tooMany = JSON.parse((await runTool('propose_stock_movement', { product_id: 'product-1', type: 'EXPORT', quantity: 999 }, staff)).content);
     expect(tooMany.error).toMatch(/Chỉ còn 24/);
 
-    runTool('propose_stock_movement', { product_id: 'product-1', type: 'EXPORT', quantity: 3 }, staff);
+    (await runTool('propose_stock_movement', { product_id: 'product-1', type: 'EXPORT', quantity: 3 }, staff));
     expect(staff.actions).toEqual([expect.objectContaining({ kind: 'STOCK_MOVEMENT', type: StockTransactionType.EXPORT, quantity: 3 })]);
     expect(database.products.find((product) => product.id === 'product-1')?.quantity).toBe(24);
   });
 
-  it('refuses tools the role was not given and reports bad input to the model', () => {
+  it('refuses tools the role was not given and reports bad input to the model', async () => {
     const { products, inventory } = setup();
     const staff = new ToolRunContext(user(UserRole.STAFF), products, inventory);
-    expect(runTool('propose_new_product', { name: 'X' }, staff).isError).toBe(true);
-    expect(runTool('get_product', {}, staff)).toMatchObject({ isError: true });
+    expect((await runTool('propose_new_product', { name: 'X' }, staff)).isError).toBe(true);
+    expect((await runTool('get_product', {}, staff))).toMatchObject({ isError: true });
   });
 });
 
@@ -203,15 +203,46 @@ describe('assistant with Claude (mocked client)', () => {
     ]);
     const reply = await service.chat(manager, { message: 'xuất 2 coca' });
     const action = reply.actions[0];
-    const { transaction } = inventory.move({ productId: 'product-1', type: StockTransactionType.EXPORT, quantity: 2 }, manager);
+    const { transaction } = (await inventory.move({ productId: 'product-1', type: StockTransactionType.EXPORT, quantity: 2 }, manager));
     const count = database.transactions.length;
-    expect(service.confirmAction(manager, reply.sessionId, action.id, transaction.id)).toEqual({ confirmed: true });
+    expect((await service.confirmAction(manager, reply.sessionId, action.id, transaction.id))).toEqual({ confirmed: true });
     const length = store.get(manager, reply.sessionId).messages.length;
     expect(JSON.stringify(store.get(manager, reply.sessionId).messages.at(-1))).toContain(transaction.id);
-    service.confirmAction(manager, reply.sessionId, action.id, transaction.id);
+    (await service.confirmAction(manager, reply.sessionId, action.id, transaction.id));
     expect(store.get(manager, reply.sessionId).messages).toHaveLength(length);
     expect(database.transactions).toHaveLength(count);
-    expect(() => service.confirmAction(manager, reply.sessionId, 'foreign-action', transaction.id)).toThrow();
+    await expect(service.confirmAction(manager, reply.sessionId, 'foreign-action', transaction.id)).rejects.toThrow();
+  });
+
+  it('rejects confirmation if chat starts while the transaction lookup is pending', async () => {
+    const { service, store, inventory, database } = setup();
+    const manager = user(UserRole.MANAGER);
+    withClient(service, [
+      toolMessage('propose', 'propose_stock_movement', { product_id: 'product-1', type: 'EXPORT', quantity: 2 }),
+      textMessage('Chờ xác nhận'),
+    ]);
+    const reply = await service.chat(manager, { message: 'xuất 2 coca' });
+    const action = reply.actions[0];
+    const { transaction } = await inventory.move({ productId: 'product-1', type: StockTransactionType.EXPORT, quantity: 2 }, manager);
+    const session = store.get(manager, reply.sessionId);
+    const before = structuredClone(session.messages);
+    let resume!: (value: typeof transaction) => void;
+    vi.spyOn(inventory, 'findTransaction').mockImplementationOnce(() => new Promise(resolve => { resume = resolve; }));
+
+    const pending = service.confirmAction(manager, reply.sessionId, action.id, transaction.id);
+    const finishChat = store.begin(session);
+    resume(transaction);
+    try {
+      await expect(pending).rejects.toMatchObject({ status: 409 });
+      expect(session.messages).toEqual(before);
+      expect(session.confirmedActions.size).toBe(0);
+      expect(database.transactions).toHaveLength(1);
+    } finally {
+      finishChat();
+    }
+    await expect(service.confirmAction(manager, reply.sessionId, action.id, transaction.id)).resolves.toEqual({ confirmed: true });
+    expect(session.messages).toHaveLength(before.length + 1);
+    expect(database.transactions).toHaveLength(1);
   });
 
   it('rejects an unrelated stock transaction as confirmation evidence', async () => {
@@ -219,8 +250,8 @@ describe('assistant with Claude (mocked client)', () => {
     const manager = user(UserRole.MANAGER);
     withClient(service, [toolMessage('p', 'propose_stock_movement', { product_id: 'product-1', type: 'EXPORT', quantity: 2 }), textMessage('chờ')]);
     const reply = await service.chat(manager, { message: 'xuất 2 coca' });
-    const { transaction } = inventory.move({ productId: 'product-1', type: StockTransactionType.IMPORT, quantity: 2 }, manager);
-    expect(() => service.confirmAction(manager, reply.sessionId, reply.actions[0].id, transaction.id)).toThrow();
+    const { transaction } = (await inventory.move({ productId: 'product-1', type: StockTransactionType.IMPORT, quantity: 2 }, manager));
+    await expect(service.confirmAction(manager, reply.sessionId, reply.actions[0].id, transaction.id)).rejects.toThrow();
   });
 
   it('bounds the entire tool loop and releases the session after timeout', async () => {

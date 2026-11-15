@@ -1,0 +1,47 @@
+﻿{
+    "lines":  [
+                  {
+                      "barcode":  "DEMO000011",
+                      "unit":  "hộp",
+                      "productId":  "product-demo-011",
+                      "quantity":  6,
+                      "name":  "Sữa tươi có đường An Nhiên 180ml"
+                  },
+                  {
+                      "barcode":  "DEMO000012",
+                      "unit":  "hộp",
+                      "productId":  "product-demo-012",
+                      "quantity":  8,
+                      "name":  "Sữa tươi không đường An Nhiên 180ml"
+                  },
+                  {
+                      "barcode":  "DEMO000013",
+                      "unit":  "hộp",
+                      "productId":  "product-demo-013",
+                      "quantity":  10,
+                      "name":  "Sữa dâu An Nhiên 180ml"
+                  },
+                  {
+                      "barcode":  "DEMO000014",
+                      "unit":  "hộp",
+                      "productId":  "product-demo-014",
+                      "quantity":  12,
+                      "name":  "Sữa socola An Nhiên 180ml"
+                  },
+                  {
+                      "barcode":  "DEMO000015",
+                      "unit":  "hộp",
+                      "productId":  "product-demo-015",
+                      "quantity":  14,
+                      "name":  "Sữa đậu nành An Nhiên 180ml"
+                  },
+                  {
+                      "barcode":  "DEMO000016",
+                      "unit":  "hộp",
+                      "productId":  "product-demo-016",
+                      "quantity":  16,
+                      "name":  "Sữa yến mạch An Nhiên 180ml"
+                  }
+              ],
+    "number":  "PN002"
+}

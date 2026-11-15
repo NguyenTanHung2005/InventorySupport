@@ -4,7 +4,11 @@ import { AuthUser, Product, StockTransactionType } from '../../common/types.js';
 import { hasPermission, Permission } from '../../common/permissions.js';
 import { InventoryService } from '../../inventory/inventory.service.js';
 import { ProductsService } from '../../products/products.service.js';
-import { AssistantAction, AssistantProduct, AssistantToolCall } from './assistant.types.js';
+import {
+  AssistantAction,
+  AssistantProduct,
+  AssistantToolCall,
+} from './assistant.types.js';
 import { numericVariants } from '../../products/scan-code.js';
 
 /**
@@ -34,7 +38,8 @@ export class ToolRunContext {
 
   /** Rút gọn sản phẩm; ẩn giá nhập với người không có quyền xem. */
   present(product: Product): AssistantProduct {
-    const showCost = this.can(Permission.REPORT_VIEW) || this.can(Permission.PRODUCT_CREATE);
+    const showCost =
+      this.can(Permission.REPORT_VIEW) || this.can(Permission.PRODUCT_CREATE);
     const summary: AssistantProduct = {
       id: product.id,
       name: product.name,
@@ -46,7 +51,12 @@ export class ToolRunContext {
       price: product.price,
       ...(showCost ? { costPrice: product.costPrice } : {}),
       imageUrl: product.imageUrl,
-      status: product.quantity <= 0 ? 'OUT' : product.quantity <= product.minStock ? 'LOW' : 'OK',
+      status:
+        product.quantity <= 0
+          ? 'OUT'
+          : product.quantity <= product.minStock
+            ? 'LOW'
+            : 'OK',
     };
     this.products.set(product.id, summary);
     return summary;
@@ -73,22 +83,36 @@ const STOCK_PERMISSION: Record<StockTransactionType, Permission> = {
 
 /** Chỉ hiển thị giá trị nguyên thủy (dùng cho dòng "Đã tra" trên mobile). */
 function label(value: unknown): string {
-  return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : '';
 }
 
-function str(input: Record<string, unknown>, key: string, max = 200): string | undefined {
+function str(
+  input: Record<string, unknown>,
+  key: string,
+  max = 200,
+): string | undefined {
   const value = input[key];
   if (value === undefined || value === null || value === '') return undefined;
-  if (typeof value !== 'string') throw new ToolInputError(`${key} phải là chuỗi`);
+  if (typeof value !== 'string')
+    throw new ToolInputError(`${key} phải là chuỗi`);
   return value.trim().slice(0, max) || undefined;
 }
 
-function int(input: Record<string, unknown>, key: string, min: number, max: number): number | undefined {
+function int(
+  input: Record<string, unknown>,
+  key: string,
+  min: number,
+  max: number,
+): number | undefined {
   const value = input[key];
   if (value === undefined || value === null || value === '') return undefined;
   const number = Number(value);
   if (!Number.isInteger(number) || number < min || number > max) {
-    throw new ToolInputError(`${key} phải là số nguyên trong khoảng ${min}-${max}`);
+    throw new ToolInputError(
+      `${key} phải là số nguyên trong khoảng ${min}-${max}`,
+    );
   }
   return number;
 }
@@ -97,7 +121,8 @@ function num(input: Record<string, unknown>, key: string): number | undefined {
   const value = input[key];
   if (value === undefined || value === null || value === '') return undefined;
   const number = Number(value);
-  if (!Number.isFinite(number) || number < 0) throw new ToolInputError(`${key} phải là số không âm`);
+  if (!Number.isFinite(number) || number < 0)
+    throw new ToolInputError(`${key} phải là số không âm`);
   return number;
 }
 
@@ -109,14 +134,21 @@ function daysAgo(days?: number): string | undefined {
   return start.toISOString();
 }
 
-function findProduct(ctx: ToolRunContext, input: Record<string, unknown>): Product {
+async function findProduct(
+  ctx: ToolRunContext,
+  input: Record<string, unknown>,
+): Promise<Product> {
   const id = str(input, 'product_id', 100);
   const barcode = str(input, 'barcode', 64);
   if (!id && !barcode) throw new ToolInputError('Cần product_id hoặc barcode');
   try {
-    return id ? ctx.productsService.findById(id, ctx.user) : ctx.productsService.findByBarcode(barcode!, ctx.user);
+    return await (id
+      ? ctx.productsService.findById(id, ctx.user)
+      : ctx.productsService.findByBarcode(barcode!, ctx.user));
   } catch {
-    throw new ToolInputError('Không tìm thấy sản phẩm. Hãy dùng search_products để lấy product_id đúng.');
+    throw new ToolInputError(
+      'Không tìm thấy sản phẩm. Hãy dùng search_products để lấy product_id đúng.',
+    );
   }
 }
 
@@ -130,28 +162,45 @@ const TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        query: { type: 'string', description: 'Từ khóa, ví dụ "coca" hoặc "mi hao hao". Để trống để liệt kê.' },
-        category: { type: 'string', description: 'Lọc đúng tên danh mục (tùy chọn)' },
-        low_stock_only: { type: 'boolean', description: 'Chỉ lấy hàng sắp hết / hết hàng' },
-        limit: { type: 'integer', description: 'Số kết quả tối đa, 1-20, mặc định 10' },
+        query: {
+          type: 'string',
+          description:
+            'Từ khóa, ví dụ "coca" hoặc "mi hao hao". Để trống để liệt kê.',
+        },
+        category: {
+          type: 'string',
+          description: 'Lọc đúng tên danh mục (tùy chọn)',
+        },
+        low_stock_only: {
+          type: 'boolean',
+          description: 'Chỉ lấy hàng sắp hết / hết hàng',
+        },
+        limit: {
+          type: 'integer',
+          description: 'Số kết quả tối đa, 1-20, mặc định 10',
+        },
       },
       additionalProperties: false,
     },
     anyOf: [Permission.PRODUCT_VIEW],
     summary: (input) => `Tìm sản phẩm "${label(input.query)}"`,
-    run: (input, ctx) => {
-      const page = ctx.productsService.list(ctx.user, {
+    run: async (input, ctx) => {
+      const page = await ctx.productsService.list(ctx.user, {
         search: str(input, 'query') ?? '',
         category: str(input, 'category', 80),
         lowStock: input.low_stock_only === true ? 'true' : undefined,
         limit: String(int(input, 'limit', 1, 20) ?? 10),
       });
-      return { total: page.total, items: page.items.map((product) => ctx.present(product)) };
+      return {
+        total: page.total,
+        items: page.items.map((product) => ctx.present(product)),
+      };
     },
   },
   {
     name: 'get_product',
-    description: 'Lấy chi tiết một sản phẩm (theo product_id hoặc barcode) kèm 5 giao dịch nhập/xuất gần nhất.',
+    description:
+      'Lấy chi tiết một sản phẩm (theo product_id hoặc barcode) kèm 5 giao dịch nhập/xuất gần nhất.',
     input_schema: {
       type: 'object',
       properties: {
@@ -162,11 +211,18 @@ const TOOLS: ToolDefinition[] = [
     },
     anyOf: [Permission.PRODUCT_VIEW],
     summary: () => 'Xem chi tiết sản phẩm',
-    run: (input, ctx) => {
-      const product = findProduct(ctx, input);
-      const history = ctx.inventoryService.transactions(ctx.user, { productId: product.id, limit: '5' });
+    run: async (input, ctx) => {
+      const product = await findProduct(ctx, input);
+      const history = await ctx.inventoryService.transactions(ctx.user, {
+        productId: product.id,
+        limit: '5',
+      });
       return {
-        product: { ...ctx.present(product), description: product.description, supplier: product.supplier },
+        product: {
+          ...ctx.present(product),
+          description: product.description,
+          supplier: product.supplier,
+        },
         recentTransactions: history.items.map((item) => ({
           type: item.type,
           quantity: item.quantity,
@@ -180,36 +236,57 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     name: 'list_low_stock',
-    description: 'Liệt kê sản phẩm đang dưới mức tồn tối thiểu hoặc đã hết hàng, sắp xếp từ ít nhất.',
-    input_schema: { type: 'object', properties: {}, additionalProperties: false },
+    description:
+      'Liệt kê sản phẩm đang dưới mức tồn tối thiểu hoặc đã hết hàng, sắp xếp từ ít nhất.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
     anyOf: [Permission.PRODUCT_VIEW],
     summary: () => 'Tra hàng sắp hết',
-    run: (_input, ctx) => {
-      const items = ctx.inventoryService.lowStock(ctx.user);
-      return { total: items.length, items: items.slice(0, 20).map((product) => ctx.present(product)) };
+    run: async (_input, ctx) => {
+      const items = await ctx.inventoryService.lowStock(ctx.user);
+      return {
+        total: items.length,
+        items: items.slice(0, 20).map((product) => ctx.present(product)),
+      };
     },
   },
   {
     name: 'list_transactions',
-    description: 'Lịch sử giao dịch kho (nhập IMPORT, xuất EXPORT, kiểm kê ADJUSTMENT), mới nhất trước.',
+    description:
+      'Lịch sử giao dịch kho (nhập IMPORT, xuất EXPORT, kiểm kê ADJUSTMENT), mới nhất trước.',
     input_schema: {
       type: 'object',
       properties: {
-        product_id: { type: 'string', description: 'Lọc theo sản phẩm (tùy chọn)' },
+        product_id: {
+          type: 'string',
+          description: 'Lọc theo sản phẩm (tùy chọn)',
+        },
         type: { type: 'string', enum: ['IMPORT', 'EXPORT', 'ADJUSTMENT'] },
-        days: { type: 'integer', description: 'Chỉ lấy N ngày gần nhất, 1 = hôm nay' },
+        days: {
+          type: 'integer',
+          description: 'Chỉ lấy N ngày gần nhất, 1 = hôm nay',
+        },
         limit: { type: 'integer', description: '1-20, mặc định 10' },
       },
       additionalProperties: false,
     },
     anyOf: [Permission.PRODUCT_VIEW],
-    summary: (input) => `Xem lịch sử giao dịch${input.days ? ` ${label(input.days)} ngày` : ''}`,
-    run: (input, ctx) => {
+    summary: (input) =>
+      `Xem lịch sử giao dịch${input.days ? ` ${label(input.days)} ngày` : ''}`,
+    run: async (input, ctx) => {
       const type = str(input, 'type', 20);
-      if (type && !Object.values(StockTransactionType).includes(type as StockTransactionType)) {
+      if (
+        type &&
+        !Object.values(StockTransactionType).includes(
+          type as StockTransactionType,
+        )
+      ) {
         throw new ToolInputError('type không hợp lệ');
       }
-      const page = ctx.inventoryService.transactions(ctx.user, {
+      const page = await ctx.inventoryService.transactions(ctx.user, {
         productId: str(input, 'product_id', 100),
         type: type as StockTransactionType | undefined,
         from: daysAgo(int(input, 'days', 1, 365)),
@@ -237,12 +314,22 @@ const TOOLS: ToolDefinition[] = [
       'Số liệu tổng hợp: số sản phẩm, tổng tồn, giá trị tồn (giá nhập và giá bán), số hàng sắp hết/hết, tổng nhập/xuất, doanh thu ước tính (xuất × giá bán), top sản phẩm xuất nhiều.',
     input_schema: {
       type: 'object',
-      properties: { days: { type: 'integer', description: 'Khoảng thời gian cho số liệu nhập/xuất, 1 = hôm nay. Bỏ trống = toàn bộ.' } },
+      properties: {
+        days: {
+          type: 'integer',
+          description:
+            'Khoảng thời gian cho số liệu nhập/xuất, 1 = hôm nay. Bỏ trống = toàn bộ.',
+        },
+      },
       additionalProperties: false,
     },
     anyOf: [Permission.REPORT_VIEW],
-    summary: (input) => `Xem tổng quan${input.days ? ` ${label(input.days)} ngày` : ''}`,
-    run: (input, ctx) => ctx.inventoryService.summary(ctx.user, { from: daysAgo(int(input, 'days', 1, 365)) }),
+    summary: (input) =>
+      `Xem tổng quan${input.days ? ` ${label(input.days)} ngày` : ''}`,
+    run: async (input, ctx) =>
+      ctx.inventoryService.summary(ctx.user, {
+        from: daysAgo(int(input, 'days', 1, 365)),
+      }),
   },
   {
     name: 'propose_stock_movement',
@@ -253,28 +340,45 @@ const TOOLS: ToolDefinition[] = [
       properties: {
         product_id: { type: 'string' },
         type: { type: 'string', enum: ['IMPORT', 'EXPORT', 'ADJUSTMENT'] },
-        quantity: { type: 'integer', description: 'IMPORT/EXPORT: > 0. ADJUSTMENT: số đếm thực tế >= 0' },
-        reason: { type: 'string', description: 'Ghi chú/lý do; bắt buộc với ADJUSTMENT' },
+        quantity: {
+          type: 'integer',
+          description: 'IMPORT/EXPORT: > 0. ADJUSTMENT: số đếm thực tế >= 0',
+        },
+        reason: {
+          type: 'string',
+          description: 'Ghi chú/lý do; bắt buộc với ADJUSTMENT',
+        },
       },
       required: ['product_id', 'type', 'quantity'],
       additionalProperties: false,
     },
-    anyOf: [Permission.STOCK_IMPORT, Permission.STOCK_EXPORT, Permission.STOCK_ADJUST],
+    anyOf: [
+      Permission.STOCK_IMPORT,
+      Permission.STOCK_EXPORT,
+      Permission.STOCK_ADJUST,
+    ],
     summary: (input) => `Đề xuất ${label(input.type)} ${label(input.quantity)}`,
-    run: (input, ctx) => {
+    run: async (input, ctx) => {
       const type = str(input, 'type', 20) as StockTransactionType | undefined;
-      if (!type || !STOCK_PERMISSION[type]) throw new ToolInputError('type phải là IMPORT, EXPORT hoặc ADJUSTMENT');
+      if (!type || !STOCK_PERMISSION[type])
+        throw new ToolInputError('type phải là IMPORT, EXPORT hoặc ADJUSTMENT');
       if (!ctx.can(STOCK_PERMISSION[type])) {
-        return { error: `Người dùng không có quyền ${type}. Hãy giải thích và không đề xuất thao tác này.` };
+        return {
+          error: `Người dùng không có quyền ${type}. Hãy giải thích và không đề xuất thao tác này.`,
+        };
       }
-      const product = findProduct(ctx, input);
+      const product = await findProduct(ctx, input);
       const isAdjustment = type === StockTransactionType.ADJUSTMENT;
       const quantity = int(input, 'quantity', isAdjustment ? 0 : 1, 1_000_000);
       if (quantity === undefined) throw new ToolInputError('Thiếu quantity');
       const reason = str(input, 'reason', 300);
-      if (isAdjustment && !reason) throw new ToolInputError('Kiểm kê cần reason');
+      if (isAdjustment && !reason)
+        throw new ToolInputError('Kiểm kê cần reason');
       if (type === StockTransactionType.EXPORT && quantity > product.quantity) {
-        return { error: `Chỉ còn ${product.quantity} ${product.unit}, không thể đề xuất xuất ${quantity}.`, product: ctx.present(product) };
+        return {
+          error: `Chỉ còn ${product.quantity} ${product.unit}, không thể đề xuất xuất ${quantity}.`,
+          product: ctx.present(product),
+        };
       }
       const action: AssistantAction = {
         id: `act-${randomUUID()}`,
@@ -289,7 +393,11 @@ const TOOLS: ToolDefinition[] = [
       };
       ctx.actions.push(action);
       ctx.present(product);
-      return { proposed: true, actionId: action.id, note: 'Đã hiển thị thẻ đề xuất; dữ liệu CHỈ thay đổi khi người dùng bấm Xác nhận.' };
+      return {
+        proposed: true,
+        actionId: action.id,
+        note: 'Đã hiển thị thẻ đề xuất; dữ liệu CHỈ thay đổi khi người dùng bấm Xác nhận.',
+      };
     },
   },
   {
@@ -299,7 +407,10 @@ const TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'Tên chuẩn, ví dụ "Coca-Cola 390ml"' },
+        name: {
+          type: 'string',
+          description: 'Tên chuẩn, ví dụ "Coca-Cola 390ml"',
+        },
         category: { type: 'string' },
         unit: { type: 'string' },
         price: { type: 'number', description: 'Giá bán VND' },
@@ -312,19 +423,31 @@ const TOOLS: ToolDefinition[] = [
     },
     anyOf: [Permission.PRODUCT_CREATE],
     summary: (input) => `Đề xuất tạo "${label(input.name)}"`,
-    run: (input, ctx) => {
+    run: async (input, ctx) => {
       const name = str(input, 'name');
       if (!name) throw new ToolInputError('Thiếu name');
       const barcode = str(input, 'barcode', 64);
-      const candidates = ctx.productsService.match(ctx.user, { name, barcode });
-      if (barcode && candidates.some((product) => numericVariants(barcode).includes(product.barcode))) {
-        throw new ToolInputError('Barcode đã có trong kho. Hãy dùng sản phẩm có sẵn.');
+      const candidates = await ctx.productsService.match(ctx.user, {
+        name,
+        barcode,
+      });
+      if (
+        barcode &&
+        candidates.some((product) =>
+          numericVariants(barcode).includes(product.barcode),
+        )
+      ) {
+        throw new ToolInputError(
+          'Barcode đã có trong kho. Hãy dùng sản phẩm có sẵn.',
+        );
       }
       for (const product of candidates) ctx.present(product);
       const action: AssistantAction = {
         id: `act-${randomUUID()}`,
         kind: 'CREATE_PRODUCT',
-        warning: candidates.length ? 'Có sản phẩm có sẵn gần giống. Hãy đối chiếu các ứng viên và xác nhận đây là một sản phẩm khác trước khi tạo.' : undefined,
+        warning: candidates.length
+          ? 'Có sản phẩm có sẵn gần giống. Hãy đối chiếu các ứng viên và xác nhận đây là một sản phẩm khác trước khi tạo.'
+          : undefined,
         prefill: {
           name,
           category: str(input, 'category', 80),
@@ -343,27 +466,45 @@ const TOOLS: ToolDefinition[] = [
 
 /** Công cụ mà vai trò này được dùng (đóng băng vào phiên khi tạo). */
 export function toolsForUser(user: AuthUser): Anthropic.Beta.BetaTool[] {
-  return TOOLS.filter((tool) => tool.anyOf.some((permission) => hasPermission(user.role, permission))).map(
-    ({ name, description, input_schema }) => ({ name, description, input_schema }),
-  );
+  return TOOLS.filter((tool) =>
+    tool.anyOf.some((permission) => hasPermission(user.role, permission)),
+  ).map(({ name, description, input_schema }) => ({
+    name,
+    description,
+    input_schema,
+  }));
 }
 
 /** Chạy một công cụ; lỗi đầu vào trả về cho model tự sửa, quyền được kiểm tra lại. */
-export function runTool(
+export async function runTool(
   name: string,
   input: unknown,
   ctx: ToolRunContext,
-): { content: string; isError: boolean } {
+): Promise<{ content: string; isError: boolean }> {
   const tool = TOOLS.find((candidate) => candidate.name === name);
   if (!tool || !tool.anyOf.some((permission) => ctx.can(permission))) {
-    return { content: JSON.stringify({ error: `Công cụ ${name} không khả dụng với người dùng này` }), isError: true };
+    return {
+      content: JSON.stringify({
+        error: `Công cụ ${name} không khả dụng với người dùng này`,
+      }),
+      isError: true,
+    };
   }
-  const args = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const args =
+    input && typeof input === 'object'
+      ? (input as Record<string, unknown>)
+      : {};
   try {
     ctx.calls.push({ name, summary: tool.summary(args) });
-    return { content: JSON.stringify(tool.run(args, ctx)), isError: false };
+    return {
+      content: JSON.stringify(await tool.run(args, ctx)),
+      isError: false,
+    };
   } catch (error) {
-    const message = error instanceof ToolInputError ? error.message : 'Lỗi khi tra cứu dữ liệu';
+    const message =
+      error instanceof ToolInputError
+        ? error.message
+        : 'Lỗi khi tra cứu dữ liệu';
     return { content: JSON.stringify({ error: message }), isError: true };
   }
 }

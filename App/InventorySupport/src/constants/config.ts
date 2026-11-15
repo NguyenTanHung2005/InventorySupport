@@ -32,13 +32,14 @@ function resolveApiUrl(): string {
 
 export const API_URL = resolveApiUrl();
 
-/** Tài khoản demo do backend tạo sẵn (mật khẩu chung: demo123). */
+/** Tài khoản của bộ seed siêu thị mini, chỉ dùng để test. */
 export const DEMO_ACCOUNTS = [
-  { label: 'Admin', email: 'admin@example.com' },
-  { label: 'Quản lý', email: 'manager@example.com' },
-  { label: 'Nhân viên', email: 'staff@example.com' },
+  { label: 'Admin', email: 'admin@minimart.example' },
+  { label: 'Quản lý', email: 'manager@minimart.example' },
+  { label: 'Nhân viên', email: 'staff1@minimart.example' },
+  { label: 'Chỉ xem', email: 'viewer@minimart.example' },
 ] as const;
-export const DEMO_PASSWORD = 'demo123';
+export const DEMO_PASSWORD = 'MiniMart123!';
 
 /** Chu kỳ kiểm tra thông báo mới (ms). */
 export const NOTIFICATION_POLL_MS = 30_000;

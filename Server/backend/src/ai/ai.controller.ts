@@ -5,7 +5,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
 import { RequirePermissions } from '../auth/permissions.decorator.js';
 import { ProductsService } from '../products/products.service.js';
-import { NormalizeProductDto, ScanImageDto } from './dto/normalize-product.dto.js';
+import {
+  NormalizeProductDto,
+  ScanImageDto,
+} from './dto/normalize-product.dto.js';
 import { AiService } from './ai.service.js';
 import { AssistantService } from './assistant/assistant.service.js';
 import { MAX_TURNS } from './assistant/assistant-session.store.js';
@@ -26,43 +29,65 @@ export class AiController {
       provider: this.aiService.providerEnabled ? 'gemini' : 'not_configured',
       assistant: {
         provider: this.assistant.provider,
-        model: this.assistant.provider === 'gemini' ? this.assistant.model : undefined,
+        model:
+          this.assistant.provider === 'gemini'
+            ? this.assistant.model
+            : undefined,
         maxTurns: MAX_TURNS,
       },
     };
   }
 
   @Post('normalize-product')
-  async normalizeProduct(@Body() dto: NormalizeProductDto, @Req() request: AuthenticatedRequest) {
-    const result = await this.aiService.normalize(dto, this.productsService.categories(request.user));
+  async normalizeProduct(
+    @Body() dto: NormalizeProductDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const result = await this.aiService.normalize(
+      dto,
+      await this.productsService.categories(request.user),
+    );
     return {
       ...result,
-      suggestions: result.suggestions.map((suggestion) => ({
-        ...suggestion,
-        matchedProducts: this.productsService.matchPublic(request.user, { barcode: suggestion.barcode, name: suggestion.normalizedName }),
-      })),
+      suggestions: await Promise.all(
+        result.suggestions.map(async (suggestion) => ({
+          ...suggestion,
+          matchedProducts: await this.productsService.matchPublic(
+            request.user,
+            { barcode: suggestion.barcode, name: suggestion.normalizedName },
+          ),
+        })),
+      ),
     };
   }
 
   /** Nhận diện ảnh + đối chiếu với sản phẩm đang có trong cửa hàng. */
   @Post('scan-image')
-  async scanImage(@Body() dto: ScanImageDto, @Req() request: AuthenticatedRequest) {
+  async scanImage(
+    @Body() dto: ScanImageDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
     const result = await this.aiService.scanImage(
       String(dto.imageUrl ?? ''),
       request.user.storeId,
-      this.productsService.categories(request.user),
+      await this.productsService.categories(request.user),
       typeof dto.note === 'string' ? dto.note : undefined,
     );
     return {
       ...result,
       imageUrl: dto.imageUrl,
-      suggestions: result.suggestions.map((suggestion) => ({
-        ...suggestion,
-        matchedProducts: this.productsService.matchPublic(request.user, {
-          barcode: suggestion.barcode,
-          name: suggestion.normalizedName,
-        }),
-      })),
+      suggestions: await Promise.all(
+        result.suggestions.map(async (suggestion) => ({
+          ...suggestion,
+          matchedProducts: await this.productsService.matchPublic(
+            request.user,
+            {
+              barcode: suggestion.barcode,
+              name: suggestion.normalizedName,
+            },
+          ),
+        })),
+      ),
     };
   }
 
@@ -72,17 +97,28 @@ export class AiController {
    */
   @Post('scan-invoice')
   @RequirePermissions(Permission.AI_USE, Permission.STOCK_IMPORT)
-  async scanInvoice(@Body() dto: ScanImageDto, @Req() request: AuthenticatedRequest) {
-    const result = await this.aiService.scanInvoice(String(dto.imageUrl ?? ''), request.user.storeId);
+  async scanInvoice(
+    @Body() dto: ScanImageDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const result = await this.aiService.scanInvoice(
+      String(dto.imageUrl ?? ''),
+      request.user.storeId,
+    );
     return {
       ...result,
       imageUrl: dto.imageUrl,
-      lines: result.lines.map((line, index) => ({
-        ...line,
-        index,
-        // Ứng viên tốt nhất đứng đầu; mobile chọn sẵn ứng viên đầu tiên.
-        candidates: this.productsService.matchPublic(request.user, { barcode: line.barcode || undefined, name: line.name }),
-      })),
+      lines: await Promise.all(
+        result.lines.map(async (line, index) => ({
+          ...line,
+          index,
+          // Ứng viên tốt nhất đứng đầu; mobile chọn sẵn ứng viên đầu tiên.
+          candidates: await this.productsService.matchPublic(request.user, {
+            barcode: line.barcode || undefined,
+            name: line.name,
+          }),
+        })),
+      ),
     };
   }
 }

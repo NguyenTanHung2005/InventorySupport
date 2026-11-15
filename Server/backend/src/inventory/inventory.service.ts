@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service.js';
 import {
   AuthUser,
@@ -17,7 +22,11 @@ import {
 } from '../common/validation.js';
 import { ProductsService } from '../products/products.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
-import { StockBatchDto, StockMovementDto, TransactionQuery } from './dto/stock-movement.dto.js';
+import {
+  StockBatchDto,
+  StockMovementDto,
+  TransactionQuery,
+} from './dto/stock-movement.dto.js';
 
 const MAX_BATCH_ITEMS = 200;
 
@@ -35,12 +44,23 @@ export class InventoryService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  move(dto: StockMovementDto, user: AuthUser) {
+  async move(dto: StockMovementDto, user: AuthUser) {
     const type = this.checkType(dto.type, user);
     const reason = this.checkReason(type, dto.reason);
-    const planned = this.plan(user, type, dto.productId, dto.quantity);
-    const result = this.apply(user, type, planned, reason);
-    this.database.save();
+    const result = await this.database.transaction(async (db) => {
+      const service = new InventoryService(
+        db,
+        new ProductsService(db),
+        new NotificationsService(db),
+      );
+      return service.apply(
+        user,
+        type,
+        await service.plan(user, type, dto.productId, dto.quantity),
+        reason,
+      );
+    });
+    if (result.alert) void this.notifications.sendPush(result.alert);
     return result;
   }
 
@@ -48,24 +68,44 @@ export class InventoryService {
    * Nhập / xuất / kiểm kê nhiều sản phẩm một lần (docs/SCAN.md mục 2.3).
    * Kiểm tra TẤT CẢ dòng trước, chỉ ghi khi mọi dòng hợp lệ: không có trạng thái ghi dở.
    */
-  moveBatch(dto: StockBatchDto, user: AuthUser) {
+  async moveBatch(dto: StockBatchDto, user: AuthUser) {
     const type = this.checkType(dto.type, user);
     const reason = this.checkReason(type, dto.reason);
-    if (!Array.isArray(dto.items) || !dto.items.length) throw new BadRequestException('Danh sách sản phẩm trống');
-    if (dto.items.length > MAX_BATCH_ITEMS) throw new BadRequestException(`Tối đa ${MAX_BATCH_ITEMS} dòng mỗi lần`);
+    if (!Array.isArray(dto.items) || !dto.items.length)
+      throw new BadRequestException('Danh sách sản phẩm trống');
+    if (dto.items.length > MAX_BATCH_ITEMS)
+      throw new BadRequestException(`Tối đa ${MAX_BATCH_ITEMS} dòng mỗi lần`);
     const ids = dto.items.map((item) => String(item?.productId ?? ''));
-    if (new Set(ids).size !== ids.length) throw new BadRequestException('Một sản phẩm xuất hiện nhiều lần trong danh sách');
+    if (new Set(ids).size !== ids.length)
+      throw new BadRequestException(
+        'Một sản phẩm xuất hiện nhiều lần trong danh sách',
+      );
 
-    const planned = dto.items.map((item, index) => {
-      try {
-        return this.plan(user, type, item?.productId, item?.quantity);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'không hợp lệ';
-        throw new BadRequestException(`Dòng ${index + 1}: ${message}`);
+    const results = await this.database.transaction(async (db) => {
+      const service = new InventoryService(
+        db,
+        new ProductsService(db),
+        new NotificationsService(db),
+      );
+      const planned = [];
+      for (const [index, item] of dto.items.entries()) {
+        try {
+          planned.push(
+            await service.plan(user, type, item?.productId, item?.quantity),
+          );
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'không hợp lệ';
+          throw new BadRequestException(`Dòng ${index + 1}: ${message}`);
+        }
       }
+      const applied = [];
+      for (const item of planned)
+        applied.push(await service.apply(user, type, item, reason));
+      return applied;
     });
-    const results = planned.map((item) => this.apply(user, type, item, reason));
-    this.database.save();
+    for (const result of results)
+      if (result.alert) void this.notifications.sendPush(result.alert);
     return {
       count: results.length,
       transactions: results.map((result) => result.transaction),
@@ -75,7 +115,11 @@ export class InventoryService {
   }
 
   private checkType(value: unknown, user: AuthUser): StockTransactionType {
-    const type = requiredEnum(value, Object.values(StockTransactionType), 'Loại giao dịch');
+    const type = requiredEnum(
+      value,
+      Object.values(StockTransactionType),
+      'Loại giao dịch',
+    );
     if (!hasPermission(user.role, PERMISSION_BY_TYPE[type])) {
       throw new ForbiddenException(
         type === StockTransactionType.IMPORT
@@ -88,7 +132,10 @@ export class InventoryService {
     return type;
   }
 
-  private checkReason(type: StockTransactionType, value: unknown): string | undefined {
+  private checkReason(
+    type: StockTransactionType,
+    value: unknown,
+  ): string | undefined {
     const reason = optionalString(value, 'Ghi chú', 300);
     if (type === StockTransactionType.ADJUSTMENT && !reason) {
       throw new BadRequestException('Kiểm kê cần ghi rõ lý do chênh lệch');
@@ -97,17 +144,30 @@ export class InventoryService {
   }
 
   /** Kiểm tra một dòng, chưa ghi gì. */
-  private plan(user: AuthUser, type: StockTransactionType, productId: unknown, rawQuantity: unknown) {
-    const product = this.products.findById(requiredString(productId, 'Sản phẩm'), user);
+  private async plan(
+    user: AuthUser,
+    type: StockTransactionType,
+    productId: unknown,
+    rawQuantity: unknown,
+  ) {
+    const product = await this.products.findById(
+      requiredString(productId, 'Sản phẩm'),
+      user,
+    );
     const isAdjustment = type === StockTransactionType.ADJUSTMENT;
-    const quantity = requiredNumber(rawQuantity, 'Số lượng', { min: isAdjustment ? 0 : 1, integer: true });
+    const quantity = requiredNumber(rawQuantity, 'Số lượng', {
+      min: isAdjustment ? 0 : 1,
+      integer: true,
+    });
     if (type === StockTransactionType.EXPORT && product.quantity < quantity) {
-      throw new BadRequestException(`Số lượng xuất vượt quá tồn kho (${product.name} còn ${product.quantity} ${product.unit})`);
+      throw new BadRequestException(
+        `Số lượng xuất vượt quá tồn kho (${product.name} còn ${product.quantity} ${product.unit})`,
+      );
     }
     return { product, quantity };
   }
 
-  private apply(
+  private async apply(
     user: AuthUser,
     type: StockTransactionType,
     { product, quantity }: { product: Product; quantity: number },
@@ -118,8 +178,23 @@ export class InventoryService {
     const after = isAdjustment
       ? quantity
       : before + (type === StockTransactionType.EXPORT ? -quantity : quantity);
-    product.quantity = after;
-    product.updatedAt = new Date().toISOString();
+    const updatedAt = new Date().toISOString();
+    const updated = await this.database.update(
+      'products',
+      {
+        _id: product.id,
+        storeId: user.storeId,
+        deletedAt: { $exists: false },
+        quantity: before,
+        updatedAt: product.updatedAt,
+      },
+      { $set: { quantity: after, updatedAt } },
+    );
+    if (!updated)
+      throw new ConflictException(
+        'Tồn kho đã thay đổi. Hãy tải lại và thử lại.',
+      );
+    product = updated;
 
     const transaction: StockTransaction = {
       id: this.database.createId('transaction'),
@@ -135,68 +210,110 @@ export class InventoryService {
       createdByName: user.name,
       createdAt: product.updatedAt,
     };
-    this.database.transactions.push(transaction);
-    const alert = this.notifications.onStockChanged(product, before);
-    // Nơi gọi (move / moveBatch) lưu file một lần sau khi ghi xong.
+    await this.database.insert('transactions', transaction);
+    const alert = await this.notifications.onStockChanged(product, before);
+    // Cảnh báo và lịch sử nằm cùng transaction; push gửi sau commit.
     return { product, transaction, alert };
   }
 
-  lowStock(user: AuthUser): Product[] {
-    return this.products
-      .active(user)
+  async lowStock(user: AuthUser): Promise<Product[]> {
+    return (await this.products.active(user))
       .filter((product) => product.quantity <= product.minStock)
       .sort((a, b) => a.quantity - b.quantity);
   }
 
-  transactions(user: AuthUser, query: TransactionQuery) {
+  async transactions(user: AuthUser, query: TransactionQuery) {
     return paginate(
-      this.filterTransactions(user, query).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      (await this.filterTransactions(user, query)).sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt),
+      ),
       parsePageQuery(query),
     );
   }
 
-  findTransaction(user: AuthUser, id: string) {
-    return this.database.transactions.find((item) => item.id === id && item.storeId === user.storeId);
+  async findTransaction(user: AuthUser, id: string) {
+    return this.database.get('transactions', {
+      _id: id,
+      storeId: user.storeId,
+    });
   }
 
   /** Số liệu tổng hợp cho Dashboard và màn Báo cáo. */
-  summary(user: AuthUser, query: Pick<TransactionQuery, 'from' | 'to'>) {
-    const products = this.products.active(user);
-    const transactions = this.filterTransactions(user, query);
+  async summary(user: AuthUser, query: Pick<TransactionQuery, 'from' | 'to'>) {
+    const products = await this.products.active(user);
+    const transactions = await this.filterTransactions(user, query);
     const sum = (type: StockTransactionType) =>
-      transactions.filter((item) => item.type === type).reduce((total, item) => total + Math.abs(item.quantity), 0);
-    const priceOf = new Map(this.database.products.map((product) => [product.id, product]));
+      transactions
+        .filter((item) => item.type === type)
+        .reduce((total, item) => total + Math.abs(item.quantity), 0);
+    const priceOf = new Map(
+      (await this.database.find('products', { storeId: user.storeId })).map(
+        (product) => [product.id, product],
+      ),
+    );
     const exportRevenue = transactions
       .filter((item) => item.type === StockTransactionType.EXPORT)
-      .reduce((total, item) => total + item.quantity * (priceOf.get(item.productId)?.price ?? 0), 0);
+      .reduce(
+        (total, item) =>
+          total + item.quantity * (priceOf.get(item.productId)?.price ?? 0),
+        0,
+      );
 
-    const byProduct = new Map<string, { productId: string; productName: string; exported: number }>();
-    for (const item of transactions.filter((entry) => entry.type === StockTransactionType.EXPORT)) {
-      const entry = byProduct.get(item.productId) ?? { productId: item.productId, productName: item.productName, exported: 0 };
+    const byProduct = new Map<
+      string,
+      { productId: string; productName: string; exported: number }
+    >();
+    for (const item of transactions.filter(
+      (entry) => entry.type === StockTransactionType.EXPORT,
+    )) {
+      const entry = byProduct.get(item.productId) ?? {
+        productId: item.productId,
+        productName: item.productName,
+        exported: 0,
+      };
       entry.exported += item.quantity;
       byProduct.set(item.productId, entry);
     }
 
     return {
       productCount: products.length,
-      totalQuantity: products.reduce((total, product) => total + product.quantity, 0),
-      stockValue: products.reduce((total, product) => total + product.quantity * product.costPrice, 0),
-      retailValue: products.reduce((total, product) => total + product.quantity * product.price, 0),
-      lowStockCount: products.filter((product) => product.quantity <= product.minStock && product.quantity > 0).length,
-      outOfStockCount: products.filter((product) => product.quantity === 0).length,
+      totalQuantity: products.reduce(
+        (total, product) => total + product.quantity,
+        0,
+      ),
+      stockValue: products.reduce(
+        (total, product) => total + product.quantity * product.costPrice,
+        0,
+      ),
+      retailValue: products.reduce(
+        (total, product) => total + product.quantity * product.price,
+        0,
+      ),
+      lowStockCount: products.filter(
+        (product) =>
+          product.quantity <= product.minStock && product.quantity > 0,
+      ).length,
+      outOfStockCount: products.filter((product) => product.quantity === 0)
+        .length,
       importedQuantity: sum(StockTransactionType.IMPORT),
       exportedQuantity: sum(StockTransactionType.EXPORT),
-      adjustmentCount: transactions.filter((item) => item.type === StockTransactionType.ADJUSTMENT).length,
+      adjustmentCount: transactions.filter(
+        (item) => item.type === StockTransactionType.ADJUSTMENT,
+      ).length,
       transactionCount: transactions.length,
       exportRevenue,
-      topExported: [...byProduct.values()].sort((a, b) => b.exported - a.exported).slice(0, 5),
+      topExported: [...byProduct.values()]
+        .sort((a, b) => b.exported - a.exported)
+        .slice(0, 5),
     };
   }
 
-  private filterTransactions(user: AuthUser, query: TransactionQuery) {
+  private async filterTransactions(user: AuthUser, query: TransactionQuery) {
     const from = this.parseDate(query.from, 'from');
     const to = this.parseDate(query.to, 'to', true);
-    return this.database.transactions.filter(
+    return (
+      await this.database.find('transactions', { storeId: user.storeId })
+    ).filter(
       (item) =>
         item.storeId === user.storeId &&
         (!query.productId || item.productId === query.productId) &&
@@ -206,10 +323,19 @@ export class InventoryService {
     );
   }
 
-  private parseDate(value: string | undefined, field: string, endOfDay = false): string | undefined {
+  private parseDate(
+    value: string | undefined,
+    field: string,
+    endOfDay = false,
+  ): string | undefined {
     if (!value) return undefined;
-    const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) && endOfDay ? `${value}T23:59:59.999` : value);
-    if (Number.isNaN(date.getTime())) throw new BadRequestException(`${field} không phải ngày hợp lệ`);
+    const date = new Date(
+      /^\d{4}-\d{2}-\d{2}$/.test(value) && endOfDay
+        ? `${value}T23:59:59.999`
+        : value,
+    );
+    if (Number.isNaN(date.getTime()))
+      throw new BadRequestException(`${field} không phải ngày hợp lệ`);
     return date.toISOString();
   }
 }

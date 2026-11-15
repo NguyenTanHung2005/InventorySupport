@@ -1,6 +1,6 @@
 ﻿# Kế hoạch chuyển dữ liệu JSON sang MongoDB Atlas
 
-> Tài liệu đề xuất để xem xét trước khi triển khai; chưa kết nối Atlas, chưa thay đổi dữ liệu hay mã ứng dụng.
+> Phạm vi mới: không chuyển dữ liệu JSON cũ; dùng bộ mẫu siêu thị mini một tháng kèm ảnh. Xem [thiết kế Atlas/LAN mới](../specs/2026-11-15-atlas-lan-mini-mart-design.md). Các bước migrate JSON bên dưới không còn thuộc phạm vi đã chọn. Chưa triển khai.
 
 **Mục tiêu:** Chuyển dữ liệu hiện có sang MongoDB Atlas, giữ nguyên hợp đồng API và bảo đảm các thao tác kho nhất quán.
 

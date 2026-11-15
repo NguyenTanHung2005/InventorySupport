@@ -46,10 +46,10 @@ InventorySupport/
 │   │   │   └── assistant/            # Hội thoại, công cụ tra kho, phiên và đề xuất
 │   │   ├── uploads/                  # Kiểm tra, lưu ảnh theo cửa hàng
 │   │   ├── notifications/            # Cảnh báo tồn kho và push
-│   │   ├── database/                 # Lưu dữ liệu JSON, RAM khi kiểm thử
+│   │   ├── database/                 # MongoDB/Mongoose, fixture riêng cho test
 │   │   └── common/                   # Kiểu dữ liệu, quyền, validation
 │   ├── test/                         # Kiểm thử E2E API; unit test nằm cạnh source
-│   ├── data/db.json                  # Dữ liệu mặc định, tạo khi backend chạy
+│   ├── fixtures/mini-mart/           # Bộ mẫu 30 ngày kèm 60 ảnh sản phẩm
 │   └── uploads/                      # Ảnh mặc định, tạo khi tải ảnh lên
 └── docs/                             # Thiết kế AI, luồng quét, kế hoạch và nghiệm thu
 ```
@@ -62,7 +62,7 @@ flowchart LR
   A -->|HTTP + JWT| B[API NestJS]
   B --> P[Kiểm tra người dùng, quyền và cửa hàng]
   P --> S[Dịch vụ sản phẩm / kho / thông báo]
-  S --> D[(DatabaseService: JSON)]
+  S --> D[(DatabaseService: MongoDB)]
   P --> AI[Dịch vụ AI]
   AI --> C[Gemini API]
   AI -->|Tra cứu qua công cụ| S
@@ -98,9 +98,13 @@ Báo cáo doanh thu là ước tính từ lượng xuất và giá bán, chưa p
 ```powershell
 cd Server\backend
 npm install
-$env:JWT_SECRET = "change-this-secret"
+$env:JWT_SECRET = "TTTTTT1261261261212121224254324534"
+$env:MONGODB_URI = 'mongodb+srv://inventory_app:mongodb123@cluster0.s43hbmf.mongodb.net/inventory_support?retryWrites=true&w=majority'
+# Seed database trống và copy ảnh trước lần chạy đầu:
+npm run seed:demo
 # Tùy chọn: bật AI nhận diện ảnh + chuẩn hóa mô tả bằng Gemini
-$env:GEMINI_API_KEY = "your-gemini-api-key"
+$env:GEMINI_API_KEY = ".Ab8RN6KYY7qbUhIq2HD_Sz6GIIMqaGTmV3le8NPktGM5acc7Ww"
+thêm AQ ở đầu apikey
 npm run start:dev
 ```
 
@@ -119,7 +123,7 @@ không chứng minh key hợp lệ hoặc Gemini đang kết nối thành công.
 |---|---|---|
 | `JWT_SECRET` | `development-only-secret` | Khóa ký JWT (bắt buộc đổi khi triển khai) |
 | `PORT` | `3000` | Cổng HTTP |
-| `DATA_FILE` | `data/db.json` | File lưu dữ liệu. Đặt `memory` để chỉ giữ trong RAM |
+| `MONGODB_URI` | Bắt buộc | URI MongoDB, phải chỉ rõ database; không fallback JSON |
 | `UPLOAD_DIR` | `uploads` | Thư mục lưu ảnh sản phẩm |
 | `GEMINI_API_KEY` | (trống) | Có key thì AI dùng Gemini; nếu thiếu key thì thông báo chưa cấu hình |
 | `AI_MODEL` | `gemini-3.5-flash-lite` | Model Gemini dùng cho AI |
@@ -147,13 +151,14 @@ npm run test:e2e -- --configLoader native --pool=threads
 Các lệnh kiểm tra bổ sung: `npm run build` và `node node_modules/typescript/bin/tsc --noEmit`
 trong backend; `npm run lint` và `node node_modules/typescript/bin/tsc --noEmit` trong app.
 
-### Tài khoản demo (mật khẩu chung `demo123`)
+### Tài khoản demo sau khi seed (mật khẩu chung `MiniMart123!`)
 
 | Email | Vai trò |
 |---|---|
-| `admin@example.com` | Quản trị viên |
-| `manager@example.com` | Quản lý |
-| `staff@example.com` | Nhân viên |
+| `admin@minimart.example` | ADMIN |
+| `manager@minimart.example` | MANAGER |
+| `staff1@minimart.example`, `staff2@minimart.example`, `staff3@minimart.example` | STAFF |
+| `viewer@minimart.example` | VIEWER |
 
 ## Chạy mobile
 

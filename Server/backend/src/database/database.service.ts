@@ -1,142 +1,145 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import {
+import type { ClientSession, Connection } from 'mongoose';
+import type {
   AppNotification,
   Product,
   StockTransaction,
   StoredUser,
-  UserRole,
 } from '../common/types.js';
-import { hashPassword } from '../common/password.js';
 
-interface DatabaseSnapshot {
-  users: StoredUser[];
-  products: Product[];
-  transactions: StockTransaction[];
-  notifications: AppNotification[];
+export interface Tables {
+  users: StoredUser;
+  products: Product;
+  transactions: StockTransaction;
+  notifications: AppNotification;
+}
+export type Table = keyof Tables;
+export type Filter = Record<string, unknown>;
+
+export function mongoUri(value: string | undefined): string {
+  if (!value || !/^mongodb(?:\+srv)?:\/\//.test(value))
+    throw new Error('Cần cấu hình MONGODB_URI hợp lệ trên backend');
+  return value;
 }
 
-/**
- * Kho dữ liệu đơn giản lưu ra file JSON (mặc định `data/db.json`).
- * Đặt `DATA_FILE=memory` (hoặc chạy test) để chỉ giữ trong RAM.
- * Các service gọi `save()` sau mỗi thao tác ghi. Khi chuyển sang
- * PostgreSQL chỉ cần thay lớp này, API giữ nguyên.
- */
+export function fromDocument<T>(document: Record<string, unknown>): T {
+  const { _id, __v: _version, adminRevision: _revision, ...fields } = document;
+  return { ...fields, id: String(_id) } as T;
+}
+
 @Injectable()
 export class DatabaseService {
-  private readonly logger = new Logger(DatabaseService.name);
-  private readonly file?: string;
+  private session?: ClientSession;
+  constructor(
+    @Inject('MONGO_CONNECTION') private readonly connection: Connection,
+  ) {}
 
-  users: StoredUser[] = [];
-  products: Product[] = [];
-  transactions: StockTransaction[] = [];
-  notifications: AppNotification[] = [];
-
-  constructor() {
-    const configured = process.env.DATA_FILE;
-    const inMemory = configured === 'memory' || process.env.VITEST !== undefined;
-    this.file = inMemory ? undefined : resolve(configured ?? 'data/db.json');
-
-    if (this.file && existsSync(this.file)) {
-      this.load(this.file);
-    } else {
-      this.seed();
-      this.save();
+  async onModuleInit(): Promise<void> {
+    for (const table of [
+      'users',
+      'products',
+      'transactions',
+      'notifications',
+    ]) {
+      await this.connection.model(table).init();
     }
   }
-
   createId(prefix: string): string {
     return `${prefix}-${randomUUID()}`;
   }
 
-  save(): void {
-    if (!this.file) return;
-    const snapshot: DatabaseSnapshot = {
-      users: this.users,
-      products: this.products,
-      transactions: this.transactions,
-      notifications: this.notifications,
-    };
-    mkdirSync(dirname(this.file), { recursive: true });
-    // Ghi ra file tạm rồi đổi tên để không làm hỏng dữ liệu nếu tiến trình bị ngắt giữa chừng.
-    const temp = `${this.file}.tmp`;
-    writeFileSync(temp, JSON.stringify(snapshot, null, 2), 'utf8');
-    renameSync(temp, this.file);
+  async find<K extends Table>(
+    table: K,
+    filter: Filter = {},
+  ): Promise<Tables[K][]> {
+    const rows = await this.connection
+      .model(table)
+      .find(filter)
+      .session(this.session ?? null)
+      .lean<Record<string, unknown>[]>()
+      .exec();
+    return rows.map((row: Record<string, unknown>) =>
+      fromDocument<Tables[K]>(row),
+    );
   }
-
-  private load(file: string): void {
+  async get<K extends Table>(
+    table: K,
+    filter: Filter,
+  ): Promise<Tables[K] | undefined> {
+    const row = await this.connection
+      .model(table)
+      .findOne(filter)
+      .session(this.session ?? null)
+      .lean<Record<string, unknown> | null>()
+      .exec();
+    return row ? fromDocument<Tables[K]>(row) : undefined;
+  }
+  async insert<K extends Table>(
+    table: K,
+    value: Tables[K],
+  ): Promise<Tables[K]> {
+    const { id, ...fields } = value;
     try {
-      const snapshot = JSON.parse(readFileSync(file, 'utf8')) as Partial<DatabaseSnapshot>;
-      this.users = snapshot.users ?? [];
-      this.products = snapshot.products ?? [];
-      this.transactions = snapshot.transactions ?? [];
-      this.notifications = snapshot.notifications ?? [];
-      this.logger.log(`Đã nạp dữ liệu từ ${file}`);
+      await this.connection
+        .model(table)
+        .create([{ ...fields, _id: id }], { session: this.session });
+      return value;
     } catch (error) {
-      this.logger.error(`Không đọc được ${file}, khởi tạo dữ liệu mẫu`, error as Error);
-      this.seed();
+      return this.writeError(error, table);
     }
   }
-
-  private seed(): void {
-    const now = new Date().toISOString();
-    const demoPassword = hashPassword('demo123');
-    const user = (id: string, name: string, email: string, role: UserRole): StoredUser => ({
-      id,
-      name,
-      email,
-      role,
-      storeId: 'store-1',
-      passwordHash: demoPassword,
-      active: true,
-      pushTokens: [],
-      createdAt: now,
-      updatedAt: now,
+  async update<K extends Table>(
+    table: K,
+    filter: Filter,
+    update: Filter,
+  ): Promise<Tables[K] | undefined> {
+    try {
+      const row = await this.connection
+        .model(table)
+        .findOneAndUpdate(filter, update, {
+          session: this.session,
+          returnDocument: 'after',
+          runValidators: true,
+        })
+        .lean<Record<string, unknown> | null>()
+        .exec();
+      return row ? fromDocument<Tables[K]>(row) : undefined;
+    } catch (error) {
+      return this.writeError(error, table);
+    }
+  }
+  async delete(table: Table, filter: Filter): Promise<void> {
+    await this.connection
+      .model(table)
+      .deleteOne(filter)
+      .session(this.session ?? null)
+      .exec();
+  }
+  async transaction<T>(work: (db: DatabaseService) => Promise<T>): Promise<T> {
+    return this.connection.transaction(async (session: ClientSession) => {
+      const scoped = new DatabaseService(this.connection);
+      scoped.session = session;
+      return work(scoped);
     });
-
-    this.users = [
-      user('user-admin-1', 'Quản trị viên', 'admin@example.com', UserRole.ADMIN),
-      user('user-manager-1', 'Quản lý kho', 'manager@example.com', UserRole.MANAGER),
-      user('user-staff-1', 'Nhân viên bán hàng', 'staff@example.com', UserRole.STAFF),
-    ];
-
-    const product = (
-      id: string,
-      barcode: string,
-      name: string,
-      category: string,
-      unit: string,
-      price: number,
-      costPrice: number,
-      quantity: number,
-      minStock: number,
-      description: string,
-    ): Product => ({
-      id,
-      storeId: 'store-1',
-      barcode,
-      name,
-      normalizedName: name,
-      description,
-      category,
-      unit,
-      price,
-      costPrice,
-      supplier: '',
-      minStock,
-      quantity,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    this.products = [
-      product('product-1', '8934588012345', 'Coca-Cola 390ml', 'Nước giải khát', 'chai', 10000, 7500, 24, 10, 'Nước ngọt có ga chai 390ml'),
-      product('product-2', '8934563138165', 'Mì Hảo Hảo tôm chua cay', 'Thực phẩm khô', 'gói', 4500, 3600, 6, 20, 'Mì ăn liền gói 75g'),
-      product('product-3', '8936036020375', 'Sữa tươi Vinamilk 180ml', 'Sữa', 'hộp', 8000, 6500, 0, 12, 'Sữa tươi tiệt trùng có đường'),
-    ];
-    this.transactions = [];
-    this.notifications = [];
+  }
+  private writeError(error: unknown, table: Table): never {
+    if (
+      (error as { code?: number; keyPattern?: { pushTokens?: number } })
+        ?.code === 11000 &&
+      (error as { keyPattern?: { pushTokens?: number } }).keyPattern?.pushTokens
+    ) {
+      throw new ConflictException(
+        'Thiết bị đang được đăng ký bởi tài khoản khác. Hãy thử lại.',
+      );
+    }
+    if ((error as { code?: number })?.code === 11000) {
+      throw new ConflictException(
+        table === 'users'
+          ? 'Email đã được sử dụng'
+          : 'Barcode đã tồn tại trong cửa hàng',
+      );
+    }
+    throw error;
   }
 }

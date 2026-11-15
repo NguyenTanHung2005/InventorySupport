@@ -16,8 +16,10 @@ type MaybeAuthenticatedRequest = Request & { user?: AuthUser };
 export class JwtAuthGuard implements CanActivate {
   constructor(private readonly database: DatabaseService) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<MaybeAuthenticatedRequest>();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context
+      .switchToHttp()
+      .getRequest<MaybeAuthenticatedRequest>();
     const authorization = request.headers.authorization;
     const token = authorization?.startsWith('Bearer ')
       ? authorization.slice('Bearer '.length)
@@ -27,16 +29,19 @@ export class JwtAuthGuard implements CanActivate {
     let subject: string;
     try {
       const payload = jwt.verify(token, jwtSecret());
-      if (typeof payload === 'string' || !payload.sub) throw new Error('invalid');
+      if (typeof payload === 'string' || !payload.sub)
+        throw new Error('invalid');
       subject = payload.sub;
     } catch {
       throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
     }
 
     // Luôn đọc lại tài khoản để role/trạng thái khóa có hiệu lực ngay lập tức.
-    const user = this.database.users.find((candidate) => candidate.id === subject);
+    const user = await this.database.get('users', { _id: subject });
     if (!user || !user.active) {
-      throw new UnauthorizedException('Tài khoản đã bị khóa hoặc không còn tồn tại');
+      throw new UnauthorizedException(
+        'Tài khoản đã bị khóa hoặc không còn tồn tại',
+      );
     }
     request.user = {
       id: user.id,
