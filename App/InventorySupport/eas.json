@@ -1,0 +1,14 @@
+{
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://defeat-city-childless.ngrok-free.dev"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}

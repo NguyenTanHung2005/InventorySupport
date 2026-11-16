@@ -6,12 +6,163 @@
 kiểm kê sản phẩm: quét mã vạch / quét ảnh bằng AI, theo dõi nhập - xuất - tồn,
 cảnh báo tồn kho thấp và chuẩn hóa mô tả sản phẩm bằng AI.
 
+## Chạy nhanh: Expo Go hoặc APK trên điện thoại thật
+
+Các lệnh bên dưới dùng PowerShell. Cần Node.js/npm, Internet và cấu hình MongoDB
+trong `Server/backend/.env` (xem [Chạy backend](#chạy-backend)). Máy clone mới chạy
+`npm ci` một lần trong từng thư mục `Server/backend` và `App/InventorySupport`.
+Không seed lại database đang có dữ liệu chỉ để khởi động ứng dụng.
+
+| Cách chạy | Cần mở trên laptop | Cần trên điện thoại |
+| --- | --- | --- |
+| Expo Go + ngrok | Backend, ngrok và Metro/Expo | Expo Go tương thích SDK 57; cùng Wi-Fi với Metro khi dùng `--lan` |
+| APK đã cài + ngrok | Backend và ngrok | APK và Internet; có thể dùng Wi-Fi khác hoặc 4G/5G |
+
+### 1. Chạy backend và kết nối ngrok (dùng cho cả hai cách)
+
+Terminal 1 — backend:
+
+```powershell
+cd D:\SE_Nam4\ReactNative\Project\InventorySupport\Server\backend
+node --env-file=.env node_modules/@nestjs/cli/bin/nest.js start --watch
+```
+
+Terminal 2 — ngrok:
+
+```powershell
+ngrok http 3000
+```
+
+Nếu máy chưa có ngrok: cài CLI từ [trang tải ngrok](https://ngrok.com/download),
+đăng nhập tài khoản ngrok rồi lưu authtoken một lần bằng lệnh sau; thay placeholder
+bằng token riêng, không đưa token vào repo:
+
+```powershell
+ngrok config add-authtoken "3MBob6l4n4TibP1uGYK8foccMbq_4RejauYUPd6orSpQJt6j5"
+```
+
+Kiểm tra dòng `Forwarding` trỏ từ **https://defeat-city-childless.ngrok-free.dev**
+tới `http://localhost:3000`. Domain này thuộc tài khoản ngrok đang dùng; tài khoản
+khác phải dùng domain được cấp cho mình và cập nhật URL app tương ứng.
+Xem [hướng dẫn chính thức của ngrok](https://ngrok.com/docs/start).
+
+Mở `https://defeat-city-childless.ngrok-free.dev/health` trên điện thoại:
+kết quả phải là JSON có `status: "ok"`, không chỉ trang HTML/HTTP 200.
+API và ảnh sản phẩm `/uploads/...` cùng đi qua domain này. Giữ cả hai terminal
+chạy và laptop không sleep trong suốt lúc dùng app.
+
+Trước khi mở backend ra Internet, đặt `JWT_SECRET` riêng và đổi mật khẩu demo
+công khai bằng chức năng tài khoản/quản trị. URI MongoDB, key AI và authtoken ngrok
+chỉ lưu phía backend/máy cá nhân, không đưa vào biến `EXPO_PUBLIC_*`.
+
+### 2. Chạy app bằng Expo Go
+
+Tạo hoặc kiểm tra `App/InventorySupport/.env.local` (file local, không commit):
+
+```dotenv
+EXPO_PUBLIC_API_URL=https://defeat-city-childless.ngrok-free.dev
+```
+
+Terminal 3 — app:
+
+```powershell
+cd D:\SE_Nam4\ReactNative\Project\InventorySupport\App\InventorySupport
+npx expo start --lan --clear
+```
+
+Cài Expo Go tương thích SDK 57, cho điện thoại và laptop dùng cùng Wi-Fi rồi quét
+QR trong terminal. Màn đăng nhập phải hiển thị URL HTTPS ngrok. Đăng nhập bằng
+tài khoản đang hoạt động để thử danh sách, ảnh sản phẩm và nghiệp vụ kho.
+
+Nếu cần tải app qua mạng khác, có thể dùng `npx expo start --tunnel --clear` thay
+cho `--lan` và làm theo yêu cầu cài tunnel của Expo CLI. Tunnel Expo phục vụ Metro;
+ngrok ở terminal 2 phục vụ backend. Cần giữ cả hai hoạt động.
+Xem [Expo CLI](https://docs.expo.dev/more/expo-cli/).
+
+Sau khi đổi `.env.local`, khởi động lại Expo. Nếu terminal đã đặt
+`EXPO_PUBLIC_API_URL` khác, bỏ biến đó hoặc dùng terminal mới để tránh ghi đè URL.
+
+### 3. Chạy bằng APK cài trên điện thoại Android thật
+
+Sau khi EAS build thành công:
+
+1. Mở link build EAS trên điện thoại, tải file `.apk` từ phần artifact của build.
+2. Cho phép trình duyệt/trình quản lý file cài ứng dụng từ nguồn đó nếu Android yêu cầu,
+   rồi mở APK và cài **InventorySupport**.
+3. Chạy backend và ngrok theo bước 1. Điện thoại có Internet là có thể gọi API,
+   không bắt buộc cùng Wi-Fi với laptop.
+4. Mở app trực tiếp từ màn hình điện thoại, đăng nhập và cấp quyền camera/ảnh khi cần.
+   Không cần Expo Go, quét QR hoặc chạy `expo start`.
+5. Kiểm tra đăng nhập, danh sách/ảnh sản phẩm, quét mã, lịch sử và phiên kiểm kê.
+   Khi thử nhập/xuất, dùng dữ liệu thử phù hợp và đối chiếu lịch sử sau thao tác.
+
+APK chỉ đóng gói ứng dụng mobile; backend và MongoDB vẫn chạy riêng. Nếu ngắt mạng
+ngay sau thao tác ghi kho, kiểm tra lịch sử trước khi gửi lại để tránh ghi trùng.
+
+## Build APK bằng EAS
+
+**Trạng thái ngày 16/11/2026:** theo thông tin người thực hiện, đã gửi build Android
+và đang ở trạng thái **Queued** (chờ hàng đợi EAS). Chưa xác nhận build thành công,
+chưa có kết quả nghiệm thu APK trên điện thoại thật. Không cần gửi thêm build
+trong lúc chờ; theo dõi trang build từ link CLI đã trả về.
+
+Cấu hình đã có trong repo:
+
+- `App/InventorySupport/app.json`: package Android `com.inventorysupport.app`,
+  cấu hình quyền/plugin native và `extra.eas.projectId` liên kết project EAS.
+- `App/InventorySupport/eas.json`: profile `preview`, `distribution: "internal"`,
+  môi trường `preview`, `android.buildType: "apk"` và
+  `EXPO_PUBLIC_API_URL=https://defeat-city-childless.ngrok-free.dev`.
+- `.env.local` dùng cho Expo local; cloud build dùng URL cấu hình trong profile EAS.
+
+Quy trình dùng để thiết lập và gửi build (tham khảo cho lần build tiếp theo):
+
+```powershell
+cd D:\SE_Nam4\ReactNative\Project\InventorySupport\App\InventorySupport
+npm run lint
+npx tsc --noEmit
+npx expo install --check
+npx expo-doctor
+npx eas-cli@latest login
+npx eas-cli@latest build:configure
+npx eas-cli@latest build --platform android --profile preview
+```
+
+`login`/`build:configure` dùng khi thiết lập lần đầu hoặc đổi tài khoản/cấu hình;
+không phải chạy lại cho mỗi build nếu đã đăng nhập và liên kết đúng project.
+Khi thiết lập lần đầu, chọn Android và cho EAS tạo keystore nếu chưa có.
+Giữ cùng package/keystore khi cập nhật APK đã cài; giữ nguyên profile `preview`
+và URL API khi EAS bổ sung cấu hình.
+
+Nếu Doctor báo lệch patch, dùng `npx expo install --fix` rồi kiểm tra lại trước
+build tiếp theo. Lỗi `Directory check failed with unexpected server response`
+nghĩa là chưa hoàn tất kiểm tra metadata từ React Native Directory; chạy lại
+`npx expo-doctor --verbose` để xem chi tiết, không coi đó là xác nhận package lỗi.
+
+Khi EAS báo build thành công, tải artifact `.apk` và cài theo phần trên.
+Profile này tạo APK cài trực tiếp, không phải AAB để phát hành Google Play.
+Tham khảo [hướng dẫn build/cài APK của Expo](https://docs.expo.dev/build-reference/apk/).
+
+URL API được đóng vào APK lúc build. Nếu đổi domain ngrok, cập nhật
+`EXPO_PUBLIC_API_URL` trong `.env.local` và profile `preview` của `eas.json`,
+kiểm tra cấu hình môi trường EAS không có URL khác, rồi build/cài APK mới.
+Chỉ đổi Wi-Fi laptop mà domain giữ nguyên thì không cần build lại; khởi động lại
+backend/tunnel nếu cần và kiểm tra Atlas cho phép IP mạng mới.
+Ngrok có quota và không thay thế máy chủ hosting hoạt động liên tục.
+Chi tiết kiểm tra kết nối: [NGROK_SETUP.md](docs/NGROK_SETUP.md).
+
 ## Cấu trúc project
 
 ```text
 InventorySupport/
 ├── App/InventorySupport/              # Expo SDK 57, React Native, React Navigation
 │   ├── App.tsx                       # Khởi tạo ứng dụng và các provider
+│   ├── index.ts                      # Entry point đăng ký ứng dụng Expo
+│   ├── app.json                      # Cấu hình Expo, Android package, plugin và EAS projectId
+│   ├── eas.json                      # Profile preview: APK và URL backend ngrok
+│   ├── .env.local                    # URL API cho Expo local, không commit
+│   ├── assets/                       # Icon, splash và tài nguyên ứng dụng
+│   ├── package.json                  # Dependency và lệnh start/lint
 │   └── src/
 │       ├── navigation/               # Điều hướng đăng nhập, các tab và màn chi tiết
 │       ├── screens/
@@ -50,10 +201,18 @@ InventorySupport/
 │   │   ├── database/                 # MongoDB/Mongoose, fixture riêng cho test
 │   │   └── common/                   # Kiểu dữ liệu, quyền, validation
 │   ├── test/                         # Kiểm thử E2E API; unit test nằm cạnh source
+│   ├── scripts/                      # Tạo/kiểm tra/thay dữ liệu demo và ảnh
+│   ├── .env                          # MongoDB, JWT, key AI; file local, không commit
 │   ├── fixtures/minimart247/         # Bộ hiện dùng: 65 sản phẩm, 65 ảnh, nguồn và dữ liệu mô phỏng
 │   ├── fixtures/mini-mart/           # Fixture cũ phục vụ script/test, không phải bộ đang chạy
 │   └── uploads/                      # Ảnh mặc định, tạo khi tải ảnh lên
-└── docs/                             # Thiết kế AI, luồng quét, kế hoạch và nghiệm thu
+└── docs/                             # Hướng dẫn, thiết kế và kết quả kiểm tra
+    ├── NGROK_SETUP.md                # Kết nối ngrok, kiểm tra API/ảnh và build APK
+    ├── MONGODB_LOCAL_SETUP.md        # Thiết lập MongoDB cho môi trường local
+    ├── DEMO_DATA.md                  # Nguồn và cách quản lý dữ liệu demo
+    ├── PROJECT_PROGRESS.md           # Tiến độ và giới hạn đã xác minh
+    ├── SCAN.md                       # Luồng quét mã/ảnh và kiểm kê
+    └── superpowers/                  # Tài liệu kế hoạch và thiết kế thay đổi
 ```
 
 ## Kiến trúc và luồng nghiệp vụ
@@ -214,7 +373,7 @@ AI có bốn luồng: chuẩn hóa tên/mô tả, hỏi đáp kho/đề xuất t
 
 MongoDB/Mongoose là dữ liệu bền vững; không fallback `data/db.json`. Transaction cần deployment hỗ trợ replica set như Atlas. ID public là chuỗi `id`, ánh xạ từ `_id`; timestamps ISO. Ảnh nằm trên filesystem backend; backup Mongo đơn lẻ không thay thế backup ảnh. Phiên chat AI ở RAM, không phải collection kiểm kê và có thể mất khi restart.
 
-Backend máy tính phải đang chạy; điện thoại gọi backend qua LAN, backend kết nối Atlas qua Internet. App không chứa URI MongoDB hoặc key AI. Đổi Wi-Fi/hotspot: kết nối cùng mạng, bỏ URL IP cố định, khởi động lại Expo LAN để tự lấy host Metro; đây là cơ chế phát triển, không phải địa chỉ ổn định cho APK độc lập.
+Backend máy tính phải đang chạy; điện thoại gọi backend qua URL HTTPS ngrok đã cấu hình hoặc qua LAN khi phát triển. Backend kết nối Atlas qua Internet; app không chứa URI MongoDB hoặc key AI. Với ngrok, điện thoại không cần cùng mạng với backend. Với Expo LAN không đặt URL API, kết nối cùng mạng và khởi động lại Expo để lấy host Metro sau khi đổi Wi-Fi/hotspot; APK dùng URL đã đóng vào bản build.
 
 ### 10. Bộ dữ liệu demo đang sử dụng và giới hạn phạm vi
 
@@ -325,7 +484,8 @@ npm install
 npm run start -- --lan   # hoặc: npm run web
 ```
 
-App **tự tìm địa chỉ backend**, nên thường không cần cấu hình gì:
+App ưu tiên `EXPO_PUBLIC_API_URL`; cấu hình local hiện dùng URL ngrok bên dưới.
+Khi không đặt biến này, app tự tìm địa chỉ backend theo môi trường:
 
 | Chạy trên | Địa chỉ được dùng |
 |---|---|
@@ -345,7 +505,8 @@ Expo tunnel chỉ chuyển tiếp Metro, không tự đưa backend cổng 3000 v
 **Không kết nối được từ điện thoại hoặc emulator?**
 
 1. Kiểm tra backend đang chạy: mở `http://localhost:3000/health` trên máy tính.
-2. Điện thoại và máy tính phải dùng cùng một mạng Wi-Fi.
+2. Nếu dùng API LAN hoặc Metro `--lan`, điện thoại và máy tính phải cùng Wi-Fi.
+   Nếu APK gọi API ngrok, kiểm tra URL `/health` của ngrok từ điện thoại; không yêu cầu cùng Wi-Fi.
 3. Với mạng Wi-Fi/hotspot tin cậy, đặt network profile thành *Private* và cho phép
    Node.js/cổng API trong firewall. Có thể dùng PowerShell **với quyền Administrator**:
 
@@ -355,6 +516,17 @@ Expo tunnel chỉ chuyển tiếp Metro, không tự đưa backend cổng 3000 v
 
    Chỉ áp dụng profile Private cho mạng tin cậy, không tắt firewall. Một số hotspot
    chặn kết nối giữa thiết bị; cần kiểm tra `http://<IP-máy-tính>:3000/health` từ điện thoại.
+
+## Kết nối qua ngrok khi đổi Wi-Fi hoặc chạy APK
+
+Đã cấu hình URL `https://defeat-city-childless.ngrok-free.dev` cho Expo local và profile
+APK preview trong `eas.json`. Chạy backend rồi `ngrok http 3000`; API và ảnh cùng đi qua
+HTTPS nên IP Wi-Fi laptop thay đổi không yêu cầu sửa URL app. Laptop/điện thoại cần Internet,
+backend và tunnel phải đang hoạt động. APK sau khi build không cần Metro/Expo Go.
+Xem [hướng dẫn ngrok và kiểm tra/build APK](docs/NGROK_SETUP.md).
+
+Kiểm JWT_SECRET riêng và đổi mật khẩu demo công khai trước khi dùng endpoint Internet;
+không đưa secret ngrok/MongoDB/JWT vào frontend. Chưa nghiệm thu APK/chuyển mạng trên thiết bị.
 
 ## Lưu và khôi phục phiên đăng nhập
 

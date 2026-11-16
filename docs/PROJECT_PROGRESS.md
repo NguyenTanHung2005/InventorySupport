@@ -1,5 +1,20 @@
 # Mốc tiến độ Inventory Support
 
+## Ngrok đã cấu hình URL local và APK preview — 16/11/2026
+
+- User cung cấp Forwarding URL `https://defeat-city-childless.ngrok-free.dev`. Đã kiểm trực tiếp: /health 200 JSON status=ok; /products không JWT trả 401; một ảnh runtime 200 image/jpeg, SHA-256 khớp nguồn. Không ghi dữ liệu/đổi tài khoản khi kiểm.
+- Đã đặt EXPO_PUBLIC_API_URL trong App/InventorySupport/.env.local (Git bỏ qua); tạo eas.json preview (internal, environment preview, android apk) cùng URL; app.json thêm package com.inventorysupport.app. Giữ plugin cũ, không thêm npm dependency hoặc sửa TS/JS.
+- Thêm docs/NGROK_SETUP.md và cập nhật README. Kiểm cấu hình URL local/EAS khớp, Expo public config resolve đúng package/4 plugin, app TypeScript/lint --no-cache và diff --check đạt. Chưa đăng nhập EAS/gửi build APK; chưa nghiệm thu điện thoại, restart tunnel/chuyển mạng hoặc đăng nhập qua tunnel bằng app.
+- .env backend chưa khai báo JWT_SECRET tại lúc kiểm; không suy ra terminal backend cũng thiếu biến. Đã nhắc kiểm secret riêng/mật khẩu demo trước dùng endpoint public, không tự thay credential hoặc in giá trị.
+- Bước tiếp: user restart Expo bằng `npx expo start --lan --clear`, kiểm URL HTTPS trên login và đăng nhập/ảnh. Giữ backend + ngrok chạy. Sau đó mới yêu cầu EAS login/build và nghiệm thu APK. Không chạy lại thay bộ dữ liệu vì cấu hình mạng.
+
+## Kế hoạch ngrok tối giản — 16/11/2026, chưa triển khai
+
+- User chọn ngrok để demo APK qua nhiều Wi-Fi, yêu cầu thiết kế đơn giản/ít đổi code. Đã lập `docs/superpowers/specs/2026-11-16-ngrok-minimal-design.md` và `docs/superpowers/plans/2026-11-16-ngrok-minimal-plan.md`.
+- Hướng mặc định: ngrok CLI ngoài repo, domain HTTPS gắn tài khoản, forward localhost:3000. Tận dụng EXPO_PUBLIC_API_URL/API_URL/resolveImageUrl hiện có; không sửa TS/JS hoặc thêm npm dependency. Đặt URL trong .env.local để thử Expo và eas.json preview cho APK; app.json chỉ thêm android.package khi chuẩn bị APK.
+- Chưa có ngrok trong PATH, chưa có eas.json; chưa cài CLI/cấu hình token/mở tunnel/build APK. Khi triển khai cần domain public thật, token do user lưu local. Kiểm JWT secret riêng và đổi password demo công khai trước mở endpoint Internet bằng chức năng sẵn có, không ghi password vào app.
+- Kiểm health phải JSON, API phải đúng quyền, ảnh đúng content-type/cùng domain, restart tunnel giữ URL và thử APK trên mạng khác. Không thêm skip-warning header dự phòng; nếu tái hiện HTML interstitial thì chẩn đoán luồng cụ thể trước sửa. Kế hoạch cần user duyệt trước thực hiện.
+
 ## Chuẩn bị đưa lên Git — 16/11/2026
 
 - Thêm .gitignore gốc để loại workspace .superpowers, .env, backup local, npm cache, bộ MINISTOP đã bỏ, raw HTML Minimart247 và preview sinh tự động/preview 42 dòng cũ khỏi Git. Giữ source/test, catalog/sources/65 ảnh/preview-65.csv và các fixture đã được track.
