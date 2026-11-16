@@ -10,7 +10,7 @@ Code ở `App/InventorySupport/src/screens/scanner/` và các endpoint liệt k�
 | # | Tình huống | Khó khăn khi làm tay | Chức năng quét giải quyết |
 |---|---|---|---|
 | N1 | Khách hỏi giá / còn hàng không | Phải lục danh sách, nhớ tên | **Tra cứu**: quét mã → thấy ngay giá, tồn, nút xuất |
-| N2 | Kiểm kê cuối ngày/tuần | Đếm tay, ghi giấy, nhập lại từng món, dễ sai | **Quét liên tục - Kiểm kê**: quét từng món, app tự đếm, so với sổ, lưu chênh lệch một lần |
+| N2 | Kiểm kê cuối ngày/tuần | Đếm tay, ghi giấy, nhập lại từng món, dễ sai | **Kiểm kê theo phiên**: quét nhận diện, nhập số thực đếm, lưu dòng, xem lại và hoàn tất |
 | N3 | Nhận hàng từ nhà cung cấp | Nhập từng dòng phiếu giao hàng | **Quét liên tục - Nhập hàng** hoặc **Đọc phiếu nhập bằng ảnh** |
 | N4 | Bán nhiều món cho một khách | Xuất từng món một | **Quét liên tục - Xuất hàng**: quét giỏ hàng rồi xuất một lần |
 | N5 | Hàng không có mã vạch (hàng rời, tự đóng gói) | Không quét được, phải gõ tên | **Tem QR do app tạo** dán lên kệ/sản phẩm; **nhận diện bằng ảnh** |
@@ -45,13 +45,12 @@ Quét / gõ mã ─► GET /products/resolve ─┬─ tìm thấy ─► thẻ 
 
 Camera khóa sau mỗi lần quét (tránh gọi API liên tục), mở lại bằng "Quét mã khác".
 
-### 2.3 Chế độ "Quét liên tục" - nhu cầu N2, N3, N4
+### 2.3 Chế độ "Quét liên tục" - nhu cầu N3, N4
 
 Chọn mục đích (chỉ hiện mục đích người dùng có quyền):
 
 | Mục đích | Quyền | Mỗi lần quét | Khi hoàn tất |
 |---|---|---|---|
-| **Kiểm kê** | Kiểm kê | Số đếm thực tế +1 | Lưu phiếu kiểm kê cho các món **chênh lệch** so với sổ |
 | **Nhập hàng** | Nhập kho | Số lượng nhập +1 | Lưu phiếu nhập cho tất cả món |
 | **Xuất hàng** | Xuất kho | Số lượng xuất +1 (không vượt tồn) | Lưu phiếu xuất cho tất cả món |
 
@@ -63,7 +62,17 @@ Chọn mục đích (chỉ hiện mục đích người dùng có quyền):
   (quyền, sản phẩm tồn tại, xuất không vượt tồn). Một dòng lỗi thì không dòng nào được ghi.
   Mỗi dòng vẫn là một giao dịch riêng trong lịch sử và vẫn kích hoạt cảnh báo tồn thấp.
 
-### 2.4 Tem QR cho sản phẩm - nhu cầu N5
+### 2.4 Kiểm kê theo phiên — UC07
+
+ADMIN/MANAGER vào Quét → Kiểm kê → Bắt đầu hoặc mở lại phiên. Mỗi người có tối đa một phiên đang mở/cửa hàng, tối đa 200 sản phẩm. Quét chỉ nhận diện; nhập số nguyên không âm theo đơn vị tồn, bao gồm 0. Chưa nhập không được lưu. Có thể tìm theo tên hoặc barcode, sửa và bỏ dòng.
+
+Lưu kết quả chỉ lưu vào phiên trên server, không đổi tồn. Quét lại mở số đã lưu để sửa, không cộng dồn. Số chưa bấm lưu có thể mất khi rời màn hình. Xem lại số đếm/chênh lệch và nhập lý do trước khi hoàn tất. Chỉ sản phẩm đã đếm được áp dụng; sản phẩm còn lại giữ nguyên.
+
+Nếu tồn/đơn vị thay đổi hoặc sản phẩm bị xóa, server chặn toàn bộ lần hoàn tất và trả các dòng cần đếm lại/bỏ. Không khóa nhập/xuất. Phiên hoàn tất/hủy chỉ xem; hủy không đổi tồn. Retry hoàn tất trả kết quả cũ, không ghi kho lần hai.
+
+API `/stocktakes`: POST tạo, GET danh sách/chi tiết, POST `/:id/identify`, PUT/DELETE `/:id/items/:productId`, POST `/:id/complete` và `/:id/cancel`. Quyền STOCK_ADJUST và owner/store được kiểm tra ở backend.
+
+### 2.5 Tem QR cho sản phẩm - nhu cầu N5
 
 Màn chi tiết sản phẩm có nút **Tem QR**: backend tạo ảnh QR (`GET /products/:id/label`)
 chứa `IS:P:<barcode>` kèm tên và giá. In hoặc chụp màn hình để dán lên kệ. Sản phẩm không có
@@ -73,13 +82,13 @@ mã vạch thật vẫn có mã nội bộ `SP...` do hệ thống sinh, nên lu
 
 ## 3. Quét bằng hình ảnh (AI)
 
-Cần `ANTHROPIC_API_KEY` trên backend (model `claude-opus-5-5`, xem `docs/AI_ASSISTANT.md`).
+Cần cấu hình Gemini trên backend, xem `docs/AI_GEMINI_MIGRATION_REPORT.md`.
 Ảnh được nén ở máy (chất lượng 0.6), tải lên `/uploads/image` rồi mới gửi cho AI.
 
 ### 3.1 Nhận diện sản phẩm - nhu cầu N5, N6
 
 ```text
-Chụp bao bì ─► upload ─► POST /ai/scan-image ─► Claude đọc ảnh (structured output)
+Chụp bao bì ─► upload ─► POST /ai/scan-image ─► Gemini đọc ảnh (structured output)
    ─► mỗi gợi ý: tên chuẩn, danh mục, đơn vị, mô tả, mã vạch đọc được, độ tin cậy
    ─► backend đối chiếu: ưu tiên barcode; nếu so tên thì loại ứng viên khác quy cách rõ ràng, vẫn cần người dùng kiểm tra
    ─► mobile: [Mở sản phẩm khớp] hoặc [Tạo sản phẩm từ gợi ý] (ảnh chụp thành ảnh sản phẩm)
@@ -98,7 +107,7 @@ Dùng khi: hàng không có mã vạch, mã mờ/rách, hoặc tạo nhanh sản
 ### 3.2 Đọc phiếu nhập / hóa đơn - nhu cầu N3
 
 ```text
-Chụp phiếu giao hàng ─► upload ─► POST /ai/scan-invoice ─► Claude trích từng dòng:
+Chụp phiếu giao hàng ─► upload ─► POST /ai/scan-invoice ─► Gemini trích từng dòng:
    tên hàng, số lượng, đơn vị, đơn giá, mã vạch (nếu in trên phiếu), nhà cung cấp, ngày
    ─► backend đối chiếu từng dòng với sản phẩm trong kho
    ─► mobile hiện bảng duyệt: dòng khớp (sửa SL được) / dòng chưa khớp (chọn sản phẩm hoặc bỏ)

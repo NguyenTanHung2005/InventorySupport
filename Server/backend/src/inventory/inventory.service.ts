@@ -167,11 +167,12 @@ export class InventoryService {
     return { product, quantity };
   }
 
-  private async apply(
+  async apply(
     user: AuthUser,
     type: StockTransactionType,
     { product, quantity }: { product: Product; quantity: number },
     reason?: string,
+    stocktakeSessionId?: string,
   ) {
     const isAdjustment = type === StockTransactionType.ADJUSTMENT;
     const before = product.quantity;
@@ -188,7 +189,7 @@ export class InventoryService {
         quantity: before,
         updatedAt: product.updatedAt,
       },
-      { $set: { quantity: after, updatedAt } },
+      { $set: { quantity: after, updatedAt }, $inc: { stockVersion: 1 } },
     );
     if (!updated)
       throw new ConflictException(
@@ -198,6 +199,7 @@ export class InventoryService {
 
     const transaction: StockTransaction = {
       id: this.database.createId('transaction'),
+      ...(stocktakeSessionId ? { stocktakeSessionId } : {}),
       storeId: user.storeId,
       productId: product.id,
       productName: product.name,

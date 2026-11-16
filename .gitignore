@@ -1,0 +1,20 @@
+# Local agent workspaces and reports
+.superpowers/
+
+# Credentials and local database backups
+.env
+.env.*
+!.env.example
+!.env.*.example
+.local-backups/
+
+# Rejected crawl dataset and raw research snapshots
+/Server/backend/fixtures/ministop/
+/Server/backend/fixtures/minimart247/raw/
+
+# Generated previews; keep catalog, sources, images, and preview-65.csv
+/Server/backend/fixtures/minimart247/activity-preview.json
+/Server/backend/fixtures/minimart247/preview.csv
+
+# Local package caches
+.npm-cache/

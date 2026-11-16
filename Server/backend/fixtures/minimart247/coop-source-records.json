@@ -1,0 +1,646 @@
+[
+  {
+    "sourceUrl": "https://cooponline.vn/tra-chanh-sa-fuzetea-450ml-thung-24-chai--s250100328",
+    "group": "nuoc-giai-khat",
+    "sku": "250100328",
+    "name": "Trà chanh sả Fuzetea 24x450ml",
+    "brand": "Fuze Tea",
+    "category": "Thức uống không cồn",
+    "unit": "Thùng",
+    "uomRatio": 1,
+    "publishedBarcode": "2000134553401",
+    "price": 191000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "24x450ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/79tgRypN4QmyYhSCcnvmiFms43TCRSlnSvABNZG71F7rztjTkGYHsQBuH0C_LdfNoZnZzE9v-bDlwSh8LZt1RHEoCHT0crEK",
+    "imageFile": "images/coop-250100328.jpg",
+    "imageSha256": "4fe368b4e2e83eec457ea34f5d14cf01bd01ce1853775e6ac9f9f3a31f810eae",
+    "observedAt": "2026-11-16T06:15:00.364Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/tra-chanh-day-hat-chia-fuze-tea-24-x450ml--s250100349",
+    "group": "nuoc-giai-khat",
+    "sku": "250100349",
+    "name": "Trà chanh dây & hạt chia Fuze Tea 24 x 450ml",
+    "brand": "Fuze Tea",
+    "category": "Thức uống không cồn",
+    "unit": "Thùng",
+    "uomRatio": 1,
+    "publishedBarcode": "2003500075187",
+    "price": 187400,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "24x450ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/zV8BHnl7VWSyEIQ3DebS5_2hBKZa-40Jl9sfTGcVKjlgQwGCZ9le31tySG_otOkWOvb4vrk_8YXuL-Fh69dgheeAr15HTZUA",
+    "imageFile": "images/coop-250100349.jpg",
+    "imageSha256": "2f86a53b2ceb1542db875278c2d456971ef5142e4f898949fed90b0bae97fcfc",
+    "observedAt": "2026-11-16T06:15:01.624Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/tra-dao-hat-chia-fuze-tea-24-x450ml--s250100351",
+    "group": "nuoc-giai-khat",
+    "sku": "250100351",
+    "name": "Trà đào & hạt chia Fuze tea 24 x 450ml",
+    "brand": "Fuze Tea",
+    "category": "Thức uống không cồn",
+    "unit": "Thùng",
+    "uomRatio": 1,
+    "publishedBarcode": "2003500075347",
+    "price": 187400,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "24x450ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/oXcKcsJ76vOdYbQazsuKOHszJEUFLpVcwD_SGKe1jve5UVzADoB8V5iKbwL8ngliOIdcGKLvesrqlb2skREsjg9qaVlYuqi8Kg",
+    "imageFile": "images/coop-250100351.jpg",
+    "imageSha256": "de2c5f7215f0e815ba0cd4c060e0bbbab741345ce4ed20f23c402fcf79636754",
+    "observedAt": "2026-11-16T06:15:02.810Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/tra-mat-ong-tac-bon-cha-24-x-450ml--s250101803",
+    "group": "nuoc-giai-khat",
+    "sku": "250101803",
+    "name": "Trà mật ong tắc Bon Cha 24 x 450ml",
+    "brand": "BonCha",
+    "category": "Thức uống không cồn",
+    "unit": "Thùng",
+    "uomRatio": 1,
+    "publishedBarcode": "2000135199110",
+    "price": 202000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "24x450ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/BusrnCvRwWqgdBTk_dSQ0O8giiXGvmiGDq99vlvPiTSVwWwI1zmENdXig9TRmBmXaUDd-rmqWKD0sII5Zp37oq5G-zux7BE0lw",
+    "imageFile": "images/coop-250101803.jpg",
+    "imageSha256": "c4678397cd594443cb93b0db45a5c1d29d975ac4e87a09ae7ce27709c1cb4069",
+    "observedAt": "2026-11-16T06:15:03.867Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/tra-mat-ong-viet-quat-bon-cha-24-x-450ml--s250101806",
+    "group": "nuoc-giai-khat",
+    "sku": "250101806",
+    "name": "Trà mật ong việt quất Bon Cha 24 x 450ml",
+    "brand": "BonCha",
+    "category": "Thức uống không cồn",
+    "unit": "Thùng",
+    "uomRatio": 1,
+    "publishedBarcode": "2000135199134",
+    "price": 202000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "24x450ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/NUClxf-fsJ5yr0kI0YN6HsDJy7_JlQ_kiC-Ty28IJzkV3_1CD87CZ4oOkQY32J3KvBtQe-sQo29ZsPD8xd6N0_IytvQu-xg",
+    "imageFile": "images/coop-250101806.jpg",
+    "imageSha256": "044c4503851728d9d252fe69b57bb46c0ea5e236067f0e05613c48a0f1acae20",
+    "observedAt": "2026-11-16T06:15:05.790Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/kem-danh-rang-oral-clean-total-active-vitamin-100ml--s250108604",
+    "group": "cham-soc-ca-nhan",
+    "sku": "250108604",
+    "name": "Kem đánh răng Oral Clean Total Active Vitamin 100ml",
+    "brand": "Oral Clean",
+    "category": "Chăm sóc răng miệng",
+    "unit": "Hộp",
+    "uomRatio": 1,
+    "publishedBarcode": "3800013512715",
+    "price": 36000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Bulgaria"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "100ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/8DxzbCEvnlEzQoHCC4NsvXtcjYQTfrzJUcCC2p1niEW6sP-a969r1uSXD8nfh0EzP0XUZ9rvHDsPs12jjtfEIsky54zrFzM",
+    "imageFile": "images/coop-250108604.jpg",
+    "imageSha256": "fed40b4311b0b8ee4c4d7c143b77c79bce5358ae45aa2da4776f393ae0772a85",
+    "observedAt": "2026-11-16T06:15:08.090Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/nuoc-rua-tay-duong-am-coop-select-huong-chanh-510g--s250101282",
+    "group": "cham-soc-ca-nhan",
+    "sku": "250101282",
+    "name": "Nước rửa tay dưỡng ẩm Co.op Select hương chanh 510g",
+    "brand": "Co.op Select",
+    "category": "Chăm sóc sức khỏe",
+    "unit": "Chai",
+    "uomRatio": 1,
+    "publishedBarcode": "8934662381042",
+    "price": 19500,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "510g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/t37alP7K-f7hrc617XJPm8KizCsMtQ2CXCb4KT9jwHqBQYDfQhqId_WacbO1kASHSuFZRGDyClqZITpEzjj6TASpLhVTrdI",
+    "imageFile": "images/coop-250101282.jpg",
+    "imageSha256": "a2c24b1cb9e4e303ec86a47da7836a9aa9e0ad87d5fd644586bb3dadd31c819e",
+    "observedAt": "2026-11-16T06:15:09.244Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/khan-tay-trang-coop-select-20-mieng--s250101681",
+    "group": "cham-soc-ca-nhan",
+    "sku": "250101681",
+    "name": "Khăn tẩy trang Co.op Select 20 miếng",
+    "brand": "Co.op Select",
+    "category": "Mỹ phẩm, chăm sóc da",
+    "unit": "Gói",
+    "uomRatio": 1,
+    "publishedBarcode": "8938536833101",
+    "price": 11400,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "20 miếng"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/B3npReNZ6taGaLEwIdnkxgDPJpZ14TcA26zEbE_yvcp9BImAgGlQDy-zg2g86G8XAMfmk_OGCuz5IVeg99dCSDV6h1NS0Vo",
+    "imageFile": "images/coop-250101681.jpg",
+    "imageSha256": "ee38ae6a93c690512474de669f08ee1bd9df1577d06d359653bf1eab9798be42",
+    "observedAt": "2026-11-16T06:15:10.451Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/sua-tam-aquala-pro-pomegranate-chai-1-2l--s250100722",
+    "group": "cham-soc-ca-nhan",
+    "sku": "250100722",
+    "name": "Sữa tắm Aquala pro Pomegranate chai 1.2L",
+    "brand": "Aquala",
+    "category": "Chăm sóc cơ thể",
+    "unit": "Chai",
+    "uomRatio": 1,
+    "publishedBarcode": "8938501933805",
+    "price": 70000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "1.2L"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/3gU_ZTe18uZC3FI5ZGjYZ85gmq1yf3YTceFiM2t4fsGXKZjktzmIPfcmISK0p5yRTtWDQIE6NZUceo6N-iWgBUmdgjHNRy4Z",
+    "imageFile": "images/coop-250100722.jpg",
+    "imageSha256": "acb04023b6238d4e87fac9582669ea732c4c7ddd6fb5eaffa8faac672f611778",
+    "observedAt": "2026-11-16T06:15:11.362Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/tao-bien-mini-godbawee-loc-8x2g--s250105110",
+    "group": "banh-keo-snack",
+    "sku": "250105110",
+    "name": "Tảo biển Mini Godbawee lốc 8x2g",
+    "brand": "Godbawee",
+    "category": "Mứt, thạch, rong biển",
+    "unit": "Gói",
+    "uomRatio": 1,
+    "publishedBarcode": "8809146900043",
+    "price": 27000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Korea Hàn Quốc"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "16g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/4QspLJZivkjR75ddGezFNtDFJepxsZ1D74HuSnek--bwOYrwMAm-1fnmuOrdWaMB07bdRFPvyS1fS0aKZf54McTChTC8u2OZ",
+    "imageFile": "images/coop-250105110.jpg",
+    "imageSha256": "bb9c2df59f6263d25d5f40c2f7433f2ceed766a8241acef21796c923f423adbd",
+    "observedAt": "2026-11-16T06:15:12.815Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/khoai-tay-pringles-sour-onion-147g--s250103620",
+    "group": "banh-keo-snack",
+    "sku": "250103620",
+    "name": "Khoai tây Pringles sour & onion 134g",
+    "brand": "Pringles",
+    "category": "Snack",
+    "unit": "Hộp",
+    "uomRatio": 1,
+    "publishedBarcode": "8886467100086",
+    "price": 33900,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Malaysia"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "134g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/X0I0b1ECoLdAneMfHOW178ls5Cu8vm5cE1v9whYpoyZN1nFwugGeYT7P1tYoeNzkSVJAN1nLkRuSDcVGKp_0BR3tFSOtSCZJ1A",
+    "imageFile": "images/coop-250103620.jpg",
+    "imageSha256": "f4183667793bfbe39dfb8e35a4255637549b102a6bf92007f45d05d4b224bc29",
+    "observedAt": "2026-11-16T06:15:13.806Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/khoai-tay-pringles-cheesy-cheese-147g--s250103629",
+    "group": "banh-keo-snack",
+    "sku": "250103629",
+    "name": "Khoai tây Pringles cheesy cheese 134g",
+    "brand": "Pringles",
+    "category": "Snack",
+    "unit": "Hộp",
+    "uomRatio": 1,
+    "publishedBarcode": "8886467100093",
+    "price": 33900,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Malaysia"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "134g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/rGKQnVVOytgcEm-BTOdECgZvty6Yr17CBi-Mmx9e2gmm0hq9whWtGHf5NhI3BC1psIKaafOcjKnTYoUEc4tDlu9R4-VW9LI",
+    "imageFile": "images/coop-250103629.jpg",
+    "imageSha256": "957cffcf11771f112ea244909d131dc83ac30638ca7a5359f975fa52d08d761e",
+    "observedAt": "2026-11-16T06:15:15.185Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/banh-hura-sandwich-cha-bong-xot-vi-bbq-tui-90g--s250109009",
+    "group": "banh-keo-snack",
+    "sku": "250109009",
+    "name": "Bánh Hura Sandwich chà bông xốt vị BBQ túi 90g",
+    "brand": "HURA",
+    "category": "Bánh",
+    "unit": "Túi",
+    "uomRatio": 1,
+    "publishedBarcode": "8934609608256",
+    "price": 14000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "90g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/1kXG6zSMslA5uwp3WwSndAhgOnukVb09t3QEpjK5HScEjamMPMYZBuuiGFt5D2YMlXQmUjhAJICBZr6SyqDKpfPdGbqbS2P1yg",
+    "imageFile": "images/coop-250109009.jpg",
+    "imageSha256": "4e41bbca3acdae622bb1687c7c4cf58a5ba8fd22a1163d4c7cdcb85c71648927",
+    "observedAt": "2026-11-16T06:15:16.513Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/banh-hura-sandwich-cha-bong-xot-pho-mai-tui-90g--s250109016",
+    "group": "banh-keo-snack",
+    "sku": "250109016",
+    "name": "Bánh Hura Sandwich chà bông xốt phô mai túi 90g",
+    "brand": "HURA",
+    "category": "Bánh",
+    "unit": "Túi",
+    "uomRatio": 1,
+    "publishedBarcode": "8934609608249",
+    "price": 14000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "90g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/PXfyPBDhCG5dWFp4_XFafNaA5k1Mqouu0bF_AAA9Dnn6YJ-kg6BTSy9xafzIPf9MWbuDMC9b_BqhlvNLGfZZkS7vINmG2YYJ",
+    "imageFile": "images/coop-250109016.jpg",
+    "imageSha256": "f55d2b0d94b40e88fb6b0d7da9062f7fba08328549664c04d956fe79c7f9331a",
+    "observedAt": "2026-11-16T06:15:17.672Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/nui-cao-cap-chu-c-meizan-400g--s250808198",
+    "group": "nui-mi-bun-banh-trang",
+    "sku": "250808198",
+    "name": "Nui cao cấp chữ C Meizan 400g",
+    "brand": "Meizan - Bột mì",
+    "category": "Nui, mì, bún, bánh tráng",
+    "unit": "Gói",
+    "uomRatio": 1,
+    "publishedBarcode": "8938509627171",
+    "price": 22000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "400g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/zBDlJUB_odrlmnFM_mk0hMq99Wm9AwaZPmdia_C3LjRqngS98Lm0Kda5C4ff-l7LmWm7VvNYFYzIWjFhsNtfHOwBwdWqZNyaXg",
+    "imageFile": "images/coop-250808198.jpg",
+    "imageSha256": "4765854abcbb4523b64ba3f4fc188835dee337cfb2b4b83b89ae801bc350c3e0",
+    "observedAt": "2026-11-16T06:15:18.813Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/nui-gao-cao-cap-meizan-400g--s260508651",
+    "group": "nui-mi-bun-banh-trang",
+    "sku": "260508651",
+    "name": "Nui gạo cao cấp Meizan 400g",
+    "brand": "Meizan",
+    "category": "Nui, mì, bún, bánh tráng",
+    "unit": "Gói",
+    "uomRatio": 1,
+    "publishedBarcode": "8938509627218",
+    "price": 21900,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "400g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/oVQftEYebVNYOoBxgB6JxsunOTM_vQaqf8QoNerT5WtEtNsu1NZ0E_RNb27ufJq95AMaeJu0ctGVL4p2HBuQ9T9B4SLz3esd",
+    "imageFile": "images/coop-260508651.jpg",
+    "imageSha256": "27dc3ce17eaf74ef9b5d6fcac1835d8f61e1142fde8648ef41d397e80a28d0f8",
+    "observedAt": "2026-11-16T06:15:19.900Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/mi-spahetti-n5-olivoila-tui-zip-500g--s260405752",
+    "group": "nui-mi-bun-banh-trang",
+    "sku": "260405752",
+    "name": "Mì Spahetti N5 Olivoila túi zip 500g",
+    "brand": "Đang cập nhật",
+    "category": "Nui, mì, bún, bánh tráng",
+    "unit": "Gói",
+    "uomRatio": 1,
+    "publishedBarcode": "8936231190277",
+    "price": 30200,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "500g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/QYY5CPYaRLaM_ZtaMwIj0bQfIvOjcxlWFKme2Os_TFVDRLcWbYiMS7uvbkxfrBCzH9-LWuYoh5ym7lyW01CT1MXTNTIuH_CV",
+    "imageFile": "images/coop-260405752.jpg",
+    "imageSha256": "bfe6ebdfc5fa1a3d025a5aea4d57b4fd8427eee3401cc4b081c8264d54f72fc3",
+    "observedAt": "2026-11-16T06:15:20.892Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/nui-xoan-cao-cap-meizan-300g--s250108969",
+    "group": "nui-mi-bun-banh-trang",
+    "sku": "250108969",
+    "name": "Nui xoắn cao cấp Meizan 300g",
+    "brand": "Meizan - Bột mì",
+    "category": "Nui, mì, bún, bánh tráng",
+    "unit": "Gói",
+    "uomRatio": 1,
+    "publishedBarcode": "8938509627270",
+    "price": 18200,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "300g"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/gYhGfAplaRLbYMIylGjUSCLOj147C7j3-fZplqYT3y11A59Q-fj0umQ1DwPYAcHAgGpFDl32yIUgaeKFbRAxgWE1L2KalKX2",
+    "imageFile": "images/coop-250108969.jpg",
+    "imageSha256": "3730b3d02edaa950e75ac5f4296a884d2e845ad570d7c5183ef7e77b1eef2878",
+    "observedAt": "2026-11-16T06:15:22.131Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/sua-tiet-trung-vinamilk-adm-gold-co-duong-loc-4x180ml--s250106516",
+    "group": "sua-cac-loai",
+    "sku": "250106516",
+    "name": "Sữa dinh dưỡng Vinamilk ADM có đường 4x180ml",
+    "brand": "Vinamilk",
+    "category": "Sữa các loại",
+    "unit": "Lốc",
+    "uomRatio": 4,
+    "publishedBarcode": "8934673547444",
+    "price": 29000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "4x180ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/B00cnyYO9VzJgAxqG0-aZGuDWBX_KohoPgslVOr7Ohvea0aw2b_SIDJ5j3jKDN9-jt3lykH9rqj3iD2r0svlzXcKBnAzdMTX",
+    "imageFile": "images/coop-250106516.jpg",
+    "imageSha256": "a79a8071d943e9ea2b2bf7237248b03fe1ceeb369ee2f92e5e0bd2520ff8b7da",
+    "observedAt": "2026-11-16T06:15:22.683Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/sua-tuoi-tiet-trung-vinamilk-100-sua-tuoi-co-duong-loc-4x180ml--s250106366",
+    "group": "sua-cac-loai",
+    "sku": "250106366",
+    "name": "Sữa tươi tiệt trùng Vinamilk 100% sữa tươi có đường lốc 4x180ml",
+    "brand": "Vinamilk",
+    "category": "Sữa các loại",
+    "unit": "Lốc",
+    "uomRatio": 1,
+    "publishedBarcode": "8934673573344",
+    "price": 33000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "4x180ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/aNIoxqY-sTzXm-LErstWkd7EtqIJFZnxzcIr6TsM_zGvbOd0BtBerDjFFpc1OFrS145XxE1KgxgS0ZUm2bKY7T-XtpSDato9",
+    "imageFile": "images/coop-250106366.jpg",
+    "imageSha256": "7875ee44fec5cf91789cb5e2449e082be90dbffe0bd32f946ff56a4087a19642",
+    "observedAt": "2026-11-16T06:15:24.677Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/sua-tuoi-tiet-trung-vinamilk-100-sua-tuoi-it-duong-loc-4x180ml--s250106489",
+    "group": "sua-cac-loai",
+    "sku": "250106489",
+    "name": "Sữa tươi tiệt trùng Vinamilk 100% sữa tươi ít đường lốc 4x180ml",
+    "brand": "Vinamilk",
+    "category": "Sữa các loại",
+    "unit": "Lốc",
+    "uomRatio": 1,
+    "publishedBarcode": "8934673581349",
+    "price": 33000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "4x180ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/0eZc7O9op5T6uR5UfUpxn6hQPLinaFh9vRzViyi4Rt2oU9_q82G-5sbz-8vXnJaBUVATN3Li_ekrGpxl1EBz0QyqWMHM1p3shw",
+    "imageFile": "images/coop-250106489.jpg",
+    "imageSha256": "38646fb9831dd5877e4aae77bc266934edbea2b343b1d865eaeec152247c5cb8",
+    "observedAt": "2026-11-16T06:15:26.320Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/sua-tuoi-tiet-trung-vinamilk-100-sua-tuoi-co-duong-thung-48x180ml--s250106712",
+    "group": "sua-cac-loai",
+    "sku": "250106712",
+    "name": "Sữa tươi tiệt trùng Vinamilk 100% sữa tươi có đường thùng 48x180ml",
+    "brand": "Vinamilk",
+    "category": "Sữa các loại",
+    "unit": "Thùng (12)",
+    "uomRatio": 1,
+    "publishedBarcode": "2000133232185",
+    "price": 396000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "48x180ml"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/UG0oRCF4-e4HgdoZYl9LDkGFQNTbn3HvcrATMuMTgvaH9evSTvegCLkGe8Ij0R-m48i33DdHUOicFD1NWefACRmZFdtpc_Y_ow",
+    "imageFile": "images/coop-250106712.jpg",
+    "imageSha256": "d252e2e75ad379f64005f4531715924a7727f9d1afb215d09953f66f50ae552a",
+    "observedAt": "2026-11-16T06:15:29.278Z"
+  },
+  {
+    "sourceUrl": "https://cooponline.vn/sua-tam-aquala-pro-silk-1-2l--s250100723",
+    "group": "cham-soc-ca-nhan",
+    "sku": "250100723",
+    "name": "Sữa tắm Aquala Pro Silk 1.2L",
+    "brand": "Aquala",
+    "category": "Chăm sóc cơ thể",
+    "unit": "Chai",
+    "uomRatio": 1,
+    "publishedBarcode": "8938501933812",
+    "price": 70000,
+    "attributes": [
+      {
+        "@type": "PropertyValue",
+        "name": "Xuất xứ",
+        "value": "Việt Nam"
+      },
+      {
+        "@type": "PropertyValue",
+        "name": "Trọng lượng/khối lượng",
+        "value": "1.2L"
+      }
+    ],
+    "imageSourceUrl": "https://lh3.googleusercontent.com/qb9iaej7xhmLe9nfTnBPo3DmJJITErIgMcpYZUmw0f7WjNIdslKV8sYcsfoaRNPc3NKrfeti4epvePMhPMSgxZtLiT3uXuTO",
+    "imageFile": "images/coop-250100723.jpg",
+    "imageSha256": "38b99cecdf365eafbc73c4aed67e514346b3ed2394812e864bd81175b186f7e9",
+    "observedAt": "2026-11-16T06:17:07.705Z"
+  }
+]

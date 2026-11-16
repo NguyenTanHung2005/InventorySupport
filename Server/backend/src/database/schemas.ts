@@ -60,6 +60,7 @@ const products = new Schema(
     supplier: String,
     minStock: count,
     quantity: count,
+    stockVersion: { ...count, default: 0 },
     imageUrl: String,
     updatedAt: iso,
     deletedAt: { ...iso, required: false },
@@ -71,6 +72,7 @@ products.index({ storeId: 1, deletedAt: 1 });
 const transactions = new Schema(
   {
     ...base,
+    stocktakeSessionId: String,
     productId: text,
     productName: text,
     type: { ...text, enum: Object.values(StockTransactionType) },
@@ -97,7 +99,49 @@ const notifications = new Schema(
   options,
 );
 notifications.index({ storeId: 1, createdAt: -1 });
+const stocktake_sessions = new Schema(
+  {
+    ...base,
+    createdBy: text,
+    createdByName: text,
+    status: { ...text, enum: ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'] },
+    revision: count,
+    reason: String,
+    updatedAt: iso,
+    completedAt: String,
+    cancelledAt: String,
+    result: { type: Schema.Types.Mixed },
+  },
+  options,
+);
+stocktake_sessions.index({ storeId: 1, createdBy: 1, updatedAt: -1 });
+stocktake_sessions.index(
+  { storeId: 1, createdBy: 1 },
+  { unique: true, partialFilterExpression: { status: 'IN_PROGRESS' } },
+);
+const stocktake_items = new Schema(
+  {
+    ...base,
+    sessionId: text,
+    productId: text,
+    productName: text,
+    barcode: text,
+    unit: text,
+    baselineQuantity: count,
+    baselineStockVersion: count,
+    countedQuantity: count,
+    revision: count,
+    countedBy: text,
+    countedAt: iso,
+    updatedAt: iso,
+  },
+  options,
+);
+stocktake_items.index({ sessionId: 1, productId: 1 }, { unique: true });
+stocktake_items.index({ storeId: 1, sessionId: 1 });
 export const models = Object.entries({
+  stocktake_sessions,
+  stocktake_items,
   users,
   products,
   transactions,

@@ -16,6 +16,8 @@ import { hashPassword } from '../../src/common/password.js';
 
 function matches(row: Record<string, unknown>, filter: Filter): boolean {
   return Object.entries(filter).every(([key, expected]) => {
+    if (key === '$or')
+      return (expected as Filter[]).some((part) => matches(row, part));
     const value = row[key === '_id' ? 'id' : key];
     if (expected && typeof expected === 'object' && !Array.isArray(expected)) {
       const condition = expected as Record<string, unknown>;
@@ -32,6 +34,8 @@ function matches(row: Record<string, unknown>, filter: Filter): boolean {
 /** Test-only fixture; transaction rollback here is not Mongo integration evidence. */
 export class MemoryDatabase extends DatabaseService {
   override async onModuleInit(): Promise<void> {}
+  stocktake_sessions: Tables['stocktake_sessions'][] = [];
+  stocktake_items: Tables['stocktake_items'][] = [];
   users: StoredUser[] = [];
   products: Product[] = [];
   transactions: StockTransaction[] = [];
@@ -122,6 +126,8 @@ export class MemoryDatabase extends DatabaseService {
     work: (db: DatabaseService) => Promise<T>,
   ): Promise<T> {
     const snapshot = structuredClone({
+      stocktake_sessions: this.stocktake_sessions,
+      stocktake_items: this.stocktake_items,
       users: this.users,
       products: this.products,
       transactions: this.transactions,

@@ -375,7 +375,11 @@ Expo Go không nhận được push từ xa. Để bật push:
 1. `npx eas-cli@latest init` để có `extra.eas.projectId` trong `app.json`.
 2. Build development: `npx eas-cli@latest build --profile development`.
 
-Nếu chưa làm hai bước trên, app vẫn cảnh báo qua polling và local notification khi đang mở.
+Trong Expo Go/web, app dùng polling để cập nhật danh sách thông báo và badge khi đang mở;
+không tải module thông báo native, tránh cảnh báo giới hạn Expo Go và lỗi notification channel.
+Thông báo hệ thống (local/push) dành cho development/standalone build. Expo Go có hỗ trợ
+local notifications nói chung, nhưng app chủ động dùng fallback trong môi trường này vì
+notification channel đang lỗi trên thiết bị thử nghiệm.
 
 ## API chính
 

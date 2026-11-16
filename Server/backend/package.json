@@ -24,7 +24,8 @@
     "check:demo": "npm run build:scripts && node dist-demo/scripts/check-demo.js",
     "images:demo": "powershell -NoProfile -File scripts/generate-demo-images.ps1",
     "test:mongo": "vitest run test/mongo.integration.spec.ts",
-    "build:scripts": "tsc -p tsconfig.scripts.json"
+    "build:scripts": "tsc -p tsconfig.scripts.json",
+    "data:replace": "npm run build:scripts && node --env-file-if-exists=.env dist-demo/scripts/replace-store-data.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.7.0",

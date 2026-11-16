@@ -1,0 +1,30 @@
+{
+  "productCount": 65,
+  "imageCount": 65,
+  "sourceCounts": {
+    "Minimart247": 42,
+    "Co.op Online": 23
+  },
+  "categories": {
+    "Văn phòng phẩm": 3,
+    "Mẹ và bé": 1,
+    "Đồ gia dụng": 4,
+    "Hoá phẩm – Vệ sinh nhà cửa": 5,
+    "Chăm sóc cá nhân": 11,
+    "Cà phê – trà": 2,
+    "Sữa các loại": 6,
+    "Nước giải khát": 8,
+    "Bánh kẹo – ăn vặt": 8,
+    "Đồ khô – đóng hộp": 3,
+    "Dầu ăn – gia vị": 4,
+    "Ngũ cốc – bột": 2,
+    "Mì – bún – phở": 6,
+    "Gạo": 2
+  },
+  "minPrice": 11000,
+  "maxPrice": 396000,
+  "totalImageBytes": 2051188,
+  "costAndThresholds": "SIMULATED",
+  "previewFile": "preview-65.csv",
+  "excludedCandidateCount": 1
+}

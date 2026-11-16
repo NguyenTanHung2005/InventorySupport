@@ -1,7 +1,7 @@
 import { API_URL } from '../constants/config';
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly details?: { conflicts?: string[]; sessionId?: string }) {
     super(message);
   }
 }
@@ -16,7 +16,7 @@ export function setUnauthorizedHandler(handler: ((token: string) => void) | unde
 
 export interface RequestOptions {
   timeoutMs?: number;
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   query?: Record<string, QueryValue>;
   token?: string;
@@ -60,6 +60,7 @@ export async function request<T>(path: string, { method = 'GET', body, query, to
     throw new ApiError(
       Array.isArray(message) ? message.join('\n') : message || text || `Lỗi ${response.status}`,
       response.status,
+      data as { conflicts?: string[]; sessionId?: string } | undefined,
     );
   }
   return data as T;

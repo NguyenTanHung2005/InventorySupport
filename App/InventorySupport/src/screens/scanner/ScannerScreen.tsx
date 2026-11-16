@@ -7,7 +7,8 @@ import { BatchScanner } from './BatchScanner';
 import { ImageScanner } from './ImageScanner';
 import { LookupScanner } from './LookupScanner';
 
-type Mode = 'lookup' | 'batch' | 'image';
+import { StocktakeSessionsScreen } from './StocktakeSessionsScreen';
+type Mode = 'lookup' | 'batch' | 'image' | 'stocktake';
 
 /**
  * Màn Quét (docs/SCAN.md):
@@ -21,6 +22,7 @@ export function ScannerScreen() {
   const { can } = useAuth();
   const canBatch = can('STOCK_IMPORT') || can('STOCK_EXPORT') || can('STOCK_ADJUST');
   const options: { value: Mode; label: string }[] = [
+    ...(can('STOCK_ADJUST') ? [{ value: 'stocktake' as const, label: 'Kiểm kê' }] : []),
     { value: 'lookup', label: 'Tra cứu' },
     ...(canBatch ? [{ value: 'batch' as const, label: 'Liên tục' }] : []),
     ...(can('AI_USE') ? [{ value: 'image' as const, label: 'Ảnh AI' }] : []),
@@ -38,6 +40,7 @@ export function ScannerScreen() {
           <BatchScanner active={mode === 'batch'} />
         </View>
       ) : null}
+      {mode === 'stocktake' ? <StocktakeSessionsScreen /> : null}
       {mode === 'image' ? <ImageScanner /> : null}
     </ScrollView>
   );

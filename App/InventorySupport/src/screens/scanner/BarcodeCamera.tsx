@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Linking, Platform, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { Button, Card } from '../../components/ui';
@@ -34,13 +34,16 @@ export function BarcodeCamera({
   height?: number;
 }) {
   const isFocused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const [cameraError, setCameraError] = useState('');
+  useEffect(() => { const listener = AppState.addEventListener('change', state => setForeground(state === 'active')); return () => listener.remove(); }, []);
   const [permission, requestPermission] = useCameraPermissions();
   const [manual, setManual] = useState('');
   const last = useRef<{ code: string; at: number }>({ code: '', at: 0 });
 
   function accept(raw: string, fromCamera: boolean) {
     const code = raw.trim();
-    if (!code) return;
+    if (!code || !active || !visible || !isFocused || AppState.currentState !== 'active') return;
     const now = Date.now();
     if (fromCamera && code === last.current.code && now - last.current.at < cooldownMs) return;
     last.current = { code, at: now };
@@ -48,7 +51,7 @@ export function BarcodeCamera({
     onScan(code);
   }
 
-  const mounted = isFocused && visible;
+  const mounted = isFocused && visible && foreground;
   const cameraOn = mounted && active;
   return (
     <View style={{ gap: 10 }}>
@@ -68,6 +71,7 @@ export function BarcodeCamera({
             <CameraView
               style={StyleSheet.absoluteFill}
               facing="back"
+              onMountError={({ message }) => setCameraError(message)}
               barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
               onBarcodeScanned={cameraOn ? ({ data }: BarcodeScanningResult) => accept(data, true) : undefined}
             />
@@ -79,6 +83,7 @@ export function BarcodeCamera({
         </View>
       )}
 
+      {cameraError ? <Text accessibilityRole="alert">{cameraError}. Có thể nhập mã thủ công.</Text> : null}
       <View style={styles.manualRow}>
         <TextInput
           style={styles.input}
@@ -96,7 +101,7 @@ export function BarcodeCamera({
         <Button
           title="Nhập"
           variant="secondary"
-          disabled={!manual.trim()}
+          disabled={!manual.trim() || !active || !mounted}
           onPress={() => {
             accept(manual, false);
             setManual('');

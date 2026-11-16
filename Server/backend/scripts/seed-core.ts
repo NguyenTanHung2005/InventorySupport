@@ -10,6 +10,8 @@ import type {
 import { isOwnUploadPath } from '../src/uploads/upload-paths.js';
 import { checkDemo, type DemoData } from './demo-data.js';
 export const tables: Table[] = [
+  'stocktake_sessions',
+  'stocktake_items',
   'users',
   'products',
   'transactions',

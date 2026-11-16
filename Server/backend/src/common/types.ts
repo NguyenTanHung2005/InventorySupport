@@ -58,6 +58,7 @@ export interface Product {
   /** Đường dẫn tương đối, ví dụ `/uploads/store-1/abc.jpg`. */
   imageUrl?: string;
   quantity: number;
+  stockVersion?: number;
   createdAt: string;
   updatedAt: string;
   /** Xóa mềm để giữ lại lịch sử nhập/xuất. */
@@ -65,6 +66,7 @@ export interface Product {
 }
 
 export interface StockTransaction {
+  stocktakeSessionId?: string;
   id: string;
   storeId: string;
   productId: string;
@@ -97,4 +99,41 @@ export interface Paginated<T> {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface StocktakeSession {
+  id: string;
+  storeId: string;
+  createdBy: string;
+  createdByName: string;
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  revision: number;
+  reason?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  result?: {
+    countedCount: number;
+    adjustedCount: number;
+    transactionIds: string[];
+    completedAt: string;
+  };
+}
+export interface StocktakeItem {
+  id: string;
+  storeId: string;
+  sessionId: string;
+  productId: string;
+  productName: string;
+  barcode: string;
+  unit: string;
+  baselineQuantity: number;
+  baselineStockVersion: number;
+  countedQuantity: number;
+  revision: number;
+  countedBy: string;
+  countedAt: string;
+  updatedAt: string;
+  createdAt: string;
 }

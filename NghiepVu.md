@@ -11,7 +11,9 @@ Inventory Support giúp cửa hàng tra cứu tồn, quản lý sản phẩm, gh
 
 Phạm vi hiện tại gồm tài khoản, bốn vai trò cố định, sản phẩm, nhập/xuất/kiểm kê trực tiếp một hoặc nhiều sản phẩm, thống kê, thông báo và AI. Mỗi sản phẩm có một đơn vị tồn kho cơ bản. Dữ liệu nghiệp vụ gắn `storeId`; luồng đăng ký và dữ liệu mẫu hiện dùng `store-1`, chưa có chức năng quản trị nhiều cửa hàng hoàn chỉnh.
 
-**Chưa triển khai:** phiên kiểm kê có phân công, lưu bản đếm riêng, gửi duyệt, phê duyệt hoặc khóa nhập/xuất theo phiên; quy đổi đơn vị, nhiều kho, lô/hạn sử dụng, đồng bộ offline và hệ thống POS/kế toán đầy đủ. Không dùng các nghiệp vụ này làm tiêu chí đã hoàn thành.
+**UC07:** đã bổ sung lưu bản đếm theo phiên của người tạo; chỉ hoàn tất mới cập nhật tồn. Chưa nghiệm thu camera trên điện thoại và đồng thời Mongo thật.
+
+**Chưa triển khai:** phân công, gửi duyệt, phê duyệt hoặc khóa nhập/xuất theo phiên; quy đổi đơn vị, nhiều kho, lô/hạn sử dụng, đồng bộ offline và hệ thống POS/kế toán đầy đủ.
 
 ## 2. Người dùng và phân quyền
 
@@ -137,7 +139,7 @@ Nguồn: `App/InventorySupport/src/navigation/AppNavigator.tsx`.
 | Trợ lý AI | Chat và chuẩn hóa/gợi ý theo quyền |
 | Quản lý tài khoản, form tài khoản | ADMIN |
 
-Chưa có màn danh sách phiên kiểm kê, phân công hoặc phê duyệt phiên.
+Có danh sách phiên của mình tại Quét → Kiểm kê, luồng nhận diện → nhập số đếm → lưu → xem lại → hoàn tất. Không có phân công hoặc phê duyệt. ADMIN/MANAGER thực hiện; STAFF giữ nguyên quyền. Tối đa 1 phiên mở/người/cửa hàng, 200 sản phẩm/phiên; cho phép chốt phần đã đếm và chặn toàn bộ nếu tồn/đơn vị thay đổi.
 
 ## 7. Lưu trữ dữ liệu hiện tại
 

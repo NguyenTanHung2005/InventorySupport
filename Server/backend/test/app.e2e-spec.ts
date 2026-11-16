@@ -51,6 +51,22 @@ describe('Inventory Support API (e2e)', () => {
     await app.close();
   });
 
+  it('stocktakes enforce roles, ownership and draft-to-completed HTTP contract', async () => {
+    await api().post('/stocktakes').set(as('staff')).expect(403);
+    const created = await api().post('/stocktakes').set(as('manager')).expect(201);
+    const id = created.body.id;
+    await api().get('/stocktakes/'+id).set(as('admin')).expect(404);
+    await api().post('/stocktakes').set(as('manager')).expect(409);
+    const identify = await api().post('/stocktakes/'+id+'/identify').set(as('manager')).send({productId:'product-1'}).expect(201);
+    await api().put('/stocktakes/'+id+'/items/product-1').set(as('manager')).send({countedQuantity:0,baselineStockVersion:identify.body.baselineStockVersion,expectedUnit:identify.body.product.unit,expectedRevision:0}).expect(200);
+    const product = await api().get('/products/product-1').set(as('manager')).expect(200);
+    expect(product.body.quantity).toBe(24);
+    const detail = await api().get('/stocktakes/'+id).set(as('manager')).expect(200);
+    await api().post('/stocktakes/'+id+'/complete').set(as('manager')).send({reason:'HTTP count',expectedRevision:detail.body.revision}).expect(201);
+    const retry = await api().post('/stocktakes/'+id+'/complete').set(as('manager')).send({expectedRevision:0}).expect(201);
+    expect(retry.body.adjustedCount).toBe(1);
+  });
+
   it('/ (GET)', () => {
     return api().get('/').expect(200).expect('Hello World!');
   });

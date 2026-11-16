@@ -31,7 +31,7 @@ export function BatchScanner({ active }: { active: boolean }) {
   const { can } = useAuth();
   const { refresh: refreshNotifications } = useNotifications();
   const purposes = useMemo(
-    () => (['ADJUSTMENT', 'IMPORT', 'EXPORT'] as StockType[]).filter((type) => can(STOCK_TYPE_PERMISSION[type])),
+    () => (['IMPORT', 'EXPORT'] as StockType[]).filter((type) => can(STOCK_TYPE_PERMISSION[type])),
     [can],
   );
   const [purpose, setPurpose] = useState<StockType>(purposes[0] ?? 'EXPORT');

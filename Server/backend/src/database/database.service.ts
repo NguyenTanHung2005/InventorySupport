@@ -8,7 +8,11 @@ import type {
   StoredUser,
 } from '../common/types.js';
 
+import type { StocktakeSession, StocktakeItem } from '../common/types.js';
+
 export interface Tables {
+  stocktake_sessions: StocktakeSession;
+  stocktake_items: StocktakeItem;
   users: StoredUser;
   products: Product;
   transactions: StockTransaction;
@@ -37,6 +41,8 @@ export class DatabaseService {
 
   async onModuleInit(): Promise<void> {
     for (const table of [
+      'stocktake_sessions',
+      'stocktake_items',
       'users',
       'products',
       'transactions',

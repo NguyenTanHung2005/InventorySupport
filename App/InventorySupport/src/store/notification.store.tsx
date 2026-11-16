@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
+import { loadNativeNotifications } from '../services/native-notifications';
 import { NOTIFICATION_POLL_MS } from '../constants/config';
 import { notificationService } from '../services/notification.service';
 import { useAuth } from './auth.store';
@@ -23,22 +23,11 @@ const NotificationContext = createContext<NotificationStore>({
   setUnreadCount: () => {},
 });
 
-if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
-}
-
 /**
  * Cảnh báo tồn kho chạy theo 2 đường:
  * 1. Push notification từ server (cần development build + EAS projectId) - hoạt động cả khi đóng app.
- * 2. Polling mỗi 30 giây khi app đang mở; có cảnh báo mới thì hiện local notification.
- *    Đường này chạy được cả trong Expo Go và trên web (hiển thị badge).
+ * 2. Polling mỗi 30 giây khi app đang mở; Expo Go/web cập nhật danh sách và badge.
+ *    Development/standalone build có thêm local notification khi phát hiện cảnh báo mới.
  */
 export function NotificationProvider({ children }: PropsWithChildren) {
   const { token, user } = useAuth();
@@ -94,7 +83,8 @@ export function useNotifications() {
 }
 
 async function showLatestAsLocalNotification(token: string) {
-  if (Platform.OS === 'web') return;
+  const Notifications = await loadNativeNotifications();
+  if (!Notifications) return;
   const { items } = await notificationService.list(token, { limit: 1, unreadOnly: true });
   const latest = items[0];
   if (!latest) return;
@@ -105,8 +95,9 @@ async function showLatestAsLocalNotification(token: string) {
 }
 
 async function registerForPush(token: string) {
-  if (Platform.OS === 'web') return;
   try {
+    const Notifications = await loadNativeNotifications();
+    if (!Notifications) return;
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'Cảnh báo tồn kho',

@@ -67,12 +67,12 @@ Các tài khoản này chỉ dành cho demo mạng riêng. Sau seed, kiểm tra 
 2. Chạy `ipconfig`, lấy IPv4 adapter Wi-Fi, ví dụ `192.168.1.20`. Backend hiện listen `0.0.0.0`, mặc định port 3000.
 3. Trong Windows Defender Firewall with Advanced Security, tạo Inbound Rule port TCP 3000, chỉ Private profile và phạm vi Local subnet. Không tắt toàn bộ firewall hoặc forward port router ra Internet.
 4. Mở trình duyệt điện thoại: `http://192.168.1.20:3000/health`. Endpoint này kiểm tra server sống, không chứng minh mọi truy vấn database đang thành công; thử đăng nhập/danh sách sản phẩm để kiểm database.
-5. Khi chạy app qua Expo, đặt URL trước khi start:
+5. Khi chạy app qua Expo trên cùng mạng LAN, app tự lấy IP máy chạy Expo qua `Constants.expoConfig.hostUri` và dùng port 3000. Để `EXPO_PUBLIC_API_URL` trống/không khai báo trong `.env.local`, các file `.env` khác và terminal; giá trị cố định sẽ ghi đè cơ chế tự nhận diện. Sau khi đổi mạng, khởi động lại Expo và quét QR mới:
 
 ```powershell
 # Terminal khác, tại App/InventorySupport
-$env:EXPO_PUBLIC_API_URL = 'http://192.168.1.20:3000'
-npm run start
+Remove-Item Env:EXPO_PUBLIC_API_URL -ErrorAction SilentlyContinue
+npm run start -- --lan --clear
 ```
 
 Không dùng `localhost` trên điện thoại. Nếu IP máy tính đổi, cập nhật URL và khởi động lại/bundle app; có thể đặt DHCP reservation trên router bạn quản lý. Cấu hình HTTP của APK release sẽ làm ở giai đoạn APK, hiện chưa nghiệm thu.

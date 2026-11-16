@@ -1,4 +1,12 @@
-﻿import {
+import { StocktakesService } from '../src/stocktakes/stocktakes.service.js';
+import { buildStoreDataset } from '../scripts/store-dataset.js';
+import {
+  applyStoreReplacement,
+  digest,
+  readBusinessSnapshot,
+  readUsers,
+} from '../scripts/replace-store-core.js';
+import {
   afterAll,
   beforeAll,
   beforeEach,
@@ -44,7 +52,14 @@ describe.skipIf(!process.env.MONGODB_TEST_URI)(
       );
     });
     beforeEach(async () => {
-      for (const name of ['users', 'products', 'transactions', 'notifications'])
+      for (const name of [
+        'users',
+        'products',
+        'transactions',
+        'notifications',
+        'stocktake_sessions',
+        'stocktake_items',
+      ])
         await connection.model(name).deleteMany({});
       for (const user of fixture.users) await db.insert('users', user);
       for (const product of fixture.products)
@@ -60,6 +75,237 @@ describe.skipIf(!process.env.MONGODB_TEST_URI)(
           await connection.dropDatabase();
         await connection.close();
       }
+    });
+    it('replaces business data atomically while preserving every account field', async () => {
+      const stocktakes = new StocktakesService(
+        db,
+        new NotificationsService(db),
+      );
+      const open = await stocktakes.create(manager);
+      const found = await stocktakes.identify(
+        open.id,
+        { productId: 'product-1' },
+        manager,
+      );
+      await stocktakes.save(
+        open.id,
+        'product-1',
+        {
+          countedQuantity: 24,
+          baselineStockVersion: found.baselineStockVersion,
+          expectedUnit: found.product.unit,
+          expectedRevision: 0,
+        },
+        manager,
+      );
+      const usersBefore = await readUsers(connection);
+      const backup = await readBusinessSnapshot(connection, 'store-1');
+      const catalog = Array.from({ length: 65 }, (_, i) => ({
+        ...fixture.products[i % 3],
+        barcode: 'RETAIL-' + i,
+        name: 'Retail ' + i,
+      }));
+      const data = buildStoreDataset(catalog, fixture.users, '2026-11-15');
+      await applyStoreReplacement(connection, data, backup, usersBefore);
+      expect(await connection.model('products').countDocuments()).toBe(65);
+      expect(await connection.model('transactions').countDocuments()).toBe(
+        data.transactions.length,
+      );
+      expect(digest(await readUsers(connection))).toBe(digest(usersBefore));
+      expect(await db.get('products', { _id: 'product-1' })).toBeUndefined();
+      expect(
+        await connection.model('stocktake_sessions').countDocuments(),
+      ).toBe(0);
+      expect(await connection.model('stocktake_items').countDocuments()).toBe(
+        0,
+      );
+    });
+    it('aborts replacement when business data changed after backup', async () => {
+      const usersBefore = await readUsers(connection),
+        backup = await readBusinessSnapshot(connection, 'store-1');
+      const data = buildStoreDataset(
+        Array.from({ length: 65 }, (_, i) => ({
+          ...fixture.products[i % 3],
+          barcode: 'RETAIL-' + i,
+          name: 'Retail ' + i,
+        })),
+        fixture.users,
+        '2026-11-15',
+      );
+      await db.update(
+        'products',
+        { _id: 'product-1' },
+        { $set: { quantity: 99 } },
+      );
+      await expect(
+        applyStoreReplacement(connection, data, backup, usersBefore),
+      ).rejects.toThrow('changed after backup');
+      expect((await db.get('products', { _id: 'product-1' }))?.quantity).toBe(
+        99,
+      );
+      expect(await connection.model('products').countDocuments()).toBe(3);
+    });
+    it('rolls back old business rows when a new insert fails after deletion', async () => {
+      const usersBefore = await readUsers(connection),
+        backup = await readBusinessSnapshot(connection, 'store-1');
+      const data = buildStoreDataset(
+        Array.from({ length: 65 }, (_, i) => ({
+          ...fixture.products[i % 3],
+          barcode: 'RETAIL-' + i,
+          name: 'Retail ' + i,
+        })),
+        fixture.users,
+        '2026-11-15',
+      );
+      const insert = vi
+        .spyOn(connection.model('transactions'), 'insertMany')
+        .mockRejectedValueOnce(new Error('Injected insertion failure'));
+      await expect(
+        applyStoreReplacement(connection, data, backup, usersBefore),
+      ).rejects.toThrow('Injected insertion failure');
+      insert.mockRestore();
+      expect(digest(await readBusinessSnapshot(connection, 'store-1'))).toBe(
+        digest(backup),
+      );
+      expect(digest(await readUsers(connection))).toBe(digest(usersBefore));
+    });
+    it('aborts before deletion when an account changed after preview', async () => {
+      const usersBefore = await readUsers(connection),
+        backup = await readBusinessSnapshot(connection, 'store-1');
+      const data = buildStoreDataset(
+        Array.from({ length: 65 }, (_, i) => ({
+          ...fixture.products[i % 3],
+          barcode: 'RETAIL-' + i,
+          name: 'Retail ' + i,
+        })),
+        fixture.users,
+        '2026-11-15',
+      );
+      await db.update(
+        'users',
+        { _id: manager.id },
+        { $set: { name: 'Changed name' } },
+      );
+      await expect(
+        applyStoreReplacement(connection, data, backup, usersBefore),
+      ).rejects.toThrow('Accounts changed');
+      expect(digest(await readBusinessSnapshot(connection, 'store-1'))).toBe(
+        digest(backup),
+      );
+    });
+    async function counted(quantity = 24) {
+      const service = new StocktakesService(db, new NotificationsService(db));
+      const session = await service.create(manager);
+      const found = await service.identify(
+        session.id,
+        { productId: 'product-1' },
+        manager,
+      );
+      await service.save(
+        session.id,
+        'product-1',
+        {
+          countedQuantity: quantity,
+          baselineStockVersion: found.baselineStockVersion,
+          expectedRevision: 0,
+          expectedUnit: found.product.unit,
+        },
+        manager,
+      );
+      return { service, session: await service.detail(session.id, manager) };
+    }
+    it('completes concurrent retries once, without duplicate movements', async () => {
+      const { service, session } = await counted(20);
+      const results = await Promise.all([
+        service.complete(
+          session.id,
+          { reason: 'count', expectedRevision: session.revision },
+          manager,
+        ),
+        service.complete(
+          session.id,
+          { reason: 'count', expectedRevision: session.revision },
+          manager,
+        ),
+      ]);
+      expect(results[0]).toEqual(results[1]);
+      expect(
+        await db.find('transactions', { stocktakeSessionId: session.id }),
+      ).toHaveLength(1);
+    });
+    it('serializes save against completion', async () => {
+      const { service, session } = await counted(20);
+      const results = await Promise.allSettled([
+        service.complete(
+          session.id,
+          { reason: 'count', expectedRevision: session.revision },
+          manager,
+        ),
+        service.save(
+          session.id,
+          'product-1',
+          {
+            countedQuantity: 10,
+            baselineStockVersion: 0,
+            expectedUnit: 'chai',
+            expectedRevision: 1,
+          },
+          manager,
+        ),
+      ]);
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const detail = await service.detail(session.id, manager);
+      expect(
+        detail.status === 'COMPLETED'
+          ? detail.items[0].countedQuantity === 20
+          : detail.items[0].countedQuantity === 10,
+      ).toBe(true);
+    });
+    it('serializes cancel against completion', async () => {
+      const { service, session } = await counted(20);
+      const results = await Promise.allSettled([
+        service.complete(
+          session.id,
+          { reason: 'count', expectedRevision: session.revision },
+          manager,
+        ),
+        service.cancel(
+          session.id,
+          { expectedRevision: session.revision },
+          manager,
+        ),
+      ]);
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const detail = await service.detail(session.id, manager);
+      expect((await db.get('products', { _id: 'product-1' }))?.quantity).toBe(
+        detail.status === 'COMPLETED' ? 20 : 24,
+      );
+    });
+    it('protects matching lines against a concurrent export', async () => {
+      const { service, session } = await counted();
+      const results = await Promise.allSettled([
+        service.complete(
+          session.id,
+          { reason: 'count', expectedRevision: session.revision },
+          manager,
+        ),
+        inventory.move(
+          {
+            productId: 'product-1',
+            type: StockTransactionType.EXPORT,
+            quantity: 1,
+          },
+          manager,
+        ),
+      ]);
+      expect(results[1].status).toBe('fulfilled');
+      expect((await db.get('products', { _id: 'product-1' }))?.quantity).toBe(
+        23,
+      );
+      if (results[0].status === 'rejected')
+        expect((await service.detail(session.id, manager)).status).toBe(
+          'IN_PROGRESS',
+        );
     });
     it('allows only one of two concurrent exports that together exceed stock', async () => {
       const results = await Promise.allSettled(

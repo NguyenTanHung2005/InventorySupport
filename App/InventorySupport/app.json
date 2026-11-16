@@ -25,7 +25,8 @@
         {
           "color": "#2f6fed"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "ios": {
       "supportsTablet": true
